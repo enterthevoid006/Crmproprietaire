@@ -1,0 +1,391 @@
+generator client {
+  provider = "prisma-client-js"
+
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------------------------
+// IAM DOMAIN (Identity & Access Management)
+// --------------------------------------------------------
+
+model Tenant {
+  id          String   @id @default(uuid()) // TODO: Use UUIDv7 in application
+  name        String
+  slug        String   @unique // For subdomain resolution
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  actors      Actor[]
+  opportunities Opportunity[]
+  interactions Interaction[]
+  tasks       Task[]
+  documents   Document[]
+  invoices    Invoice[]
+  quotes      Quote[]
+
+  @@map("tenants")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MANAGER
+  USER
+  VIEWER
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String   // Hashed
+  firstName   String?
+  lastName    String?
+  
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  
+  role        Role     @default(ADMIN) // Default to Admin for MVP simplicity, then restrict
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+// --------------------------------------------------------
+// ACTOR DOMAIN (Contacts & Organizations)
+// --------------------------------------------------------
+
+enum ActorType {
+  INDIVIDUAL
+  CORPORATE
+}
+
+model Actor {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  type        ActorType
+  firstName   String?   // For Individual
+  lastName    String?   // For Individual
+  companyName String?   // For Corporate
+
+  email       String?
+  phone       String?
+  address     String?   // New: Business Address
+  source      String?   // New: Lead Source (e.g. Website, Referral)
+  tags        String[]  // New: Tags for segmentation (e.g. "VIP", "Prospect")
+  
+  // High-value: Custom fields and flexible data
+  customFields Json?    @db.JsonB
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime? // Soft Delete
+  
+  opportunities Opportunity[]
+  interactions  Interaction[]
+  tasks         Task[]
+  documents     Document[]
+  invoices      Invoice[]
+  quotes        Quote[]
+
+  @@index([tenantId])
+  @@map("actors")
+}
+
+// --------------------------------------------------------
+// OPPORTUNITY DOMAIN (Sales Pipeline)
+// --------------------------------------------------------
+
+enum OpportunityStage {
+  NEW
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+model Opportunity {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  actorId     String
+  actor       Actor    @relation(fields: [actorId], references: [id])
+
+  name        String
+  amount      Float    @default(0)
+  stage       OpportunityStage @default(NEW)
+  probability Int      @default(0) // New: Win probability %
+  expectedCloseDate DateTime?      // New: Forecast date
+  closeDate   DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  interactions Interaction[]
+  tasks        Task[]
+  documents    Document[]
+  invoices     Invoice[]
+  quotes       Quote[]
+
+  @@index([tenantId])
+  @@index([actorId])
+  @@map("opportunities")
+}
+
+// --------------------------------------------------------
+// INTERACTION DOMAIN (History)
+// --------------------------------------------------------
+
+enum InteractionType {
+  EMAIL
+  CALL
+  MEETING
+  NOTE
+  OTHER
+}
+
+model Interaction {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  // Polymorphic-like relationships (can belong to Actor OR Opportunity)
+  actorId     String?
+  actor       Actor?   @relation(fields: [actorId], references: [id])
+
+  opportunityId String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+
+  type        InteractionType
+  summary     String
+  details     String?  @db.Text
+  date        DateTime @default(now())
+
+  // In a real app, link to Author (User)
+  // authorId    String
+  // author      User   @relation(...)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([actorId])
+  @@index([opportunityId])
+  @@map("interactions")
+}
+
+// --------------------------------------------------------
+// TASK DOMAIN (Reminders & Todos)
+// --------------------------------------------------------
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  // Context
+  actorId     String?
+  actor       Actor?   @relation(fields: [actorId], references: [id])
+
+  opportunityId String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+
+  // Content
+  title       String
+  description String?
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+
+  // Assignment
+  // assignedToUserId String? 
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([actorId])
+  @@index([opportunityId])
+  @@map("tasks")
+}
+
+// --------------------------------------------------------
+// DOCUMENT DOMAIN (GED)
+// --------------------------------------------------------
+
+model Document {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  // Relationships (Optional)
+  actorId     String?
+  actor       Actor?   @relation(fields: [actorId], references: [id])
+
+  opportunityId String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+
+  // File Metadata
+  filename    String
+  path        String   // Storage path/key
+  mimeType    String
+  size        Int      // Bytes
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([actorId])
+  @@index([opportunityId])
+  @@map("documents")
+}
+
+// --------------------------------------------------------
+// FINANCE DOMAIN (Quotes & Invoices)
+// --------------------------------------------------------
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model Invoice {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  // Context
+  actorId     String
+  actor       Actor    @relation(fields: [actorId], references: [id])
+
+  opportunityId String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+
+  // Header Data
+  number      String   // Invoice # (e.g. "INV-2023-001")
+  date        DateTime @default(now())
+  dueDate     DateTime
+
+  status      InvoiceStatus @default(DRAFT)
+
+  // Financials
+  subtotal    Float    @default(0)
+  taxAmount   Float    @default(0)
+  total       Float    @default(0)
+
+  // Items (JSON for simplicity in MVP, could be separate table for strict SQL)
+  items       Json     @db.JsonB 
+  
+  // Example JSON structure:
+  // [
+  //   { description: "Consulting", quantity: 10, unitPrice: 100, total: 1000 }
+  // ]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([actorId])
+  @@index([opportunityId])
+  @@unique([tenantId, number])
+  @@map("invoices")
+}
+
+model Quote {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  // Context
+  actorId     String
+  actor       Actor    @relation(fields: [actorId], references: [id])
+
+  opportunityId String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+
+  // Header Data
+  number      String   // Quote # (e.g. "QT-2023-001")
+  date        DateTime @default(now())
+  validUntil  DateTime
+
+  status      QuoteStatus @default(DRAFT)
+
+  // Financials
+  subtotal    Float    @default(0)
+  taxAmount   Float    @default(0)
+  total       Float    @default(0)
+
+  items       Json     @db.JsonB
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([actorId])
+  @@index([opportunityId])
+  @@unique([tenantId, number])
+  @@map("quotes")
+}
+
+// --------------------------------------------------------
+// SYSTEM AUDIT
+// --------------------------------------------------------
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  tenantId    String
+  
+  // Who
+  userId      String?
+  userEmail   String?  // Snapshot in case user is deleted
+  ipAddress   String?
+  userAgent   String?
+
+  // What
+  entity      String   // e.g. "Invoice", "Actor"
+  entityId    String
+  action      String   // CREATE, UPDATE, DELETE, TRANSITION
+  
+  // Details
+  oldValue    Json?    @db.JsonB
+  newValue    Json?    @db.JsonB
+  
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}

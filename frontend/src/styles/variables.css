@@ -1,0 +1,89 @@
+:root {
+  /* =========================================
+     Color Palette (HSL) - Premium Theme
+     ========================================= */
+  
+  /* Primary Brand (Vibrant Indigo/Violet) */
+  --primary-hue: 256;
+  --primary-sat: 85%;
+  --primary-light: 65%;
+  --color-primary: hsl(var(--primary-hue), var(--primary-sat), var(--primary-light));
+  --color-primary-hover: hsl(var(--primary-hue), var(--primary-sat), 55%);
+  --color-primary-active: hsl(var(--primary-hue), var(--primary-sat), 45%);
+  --color-on-primary: #ffffff;
+
+  /* Surfaces (Light Mode Default) */
+  --surface-1: 220 30% 98%; /* Main Background (Alice Blue tinted) */
+  --surface-2: 0 0% 100%;   /* Panels/Cards */
+  --surface-3: 220 20% 95%; /* Inputs/Secondary */
+  
+  --text-1: 220 40% 10%;    /* Headings */
+  --text-2: 220 20% 40%;    /* Body */
+  --text-3: 220 10% 60%;    /* Disabled/Hints */
+
+  --border-1: 220 20% 90%;
+  --border-2: 220 20% 80%;
+
+  /* Status Colors */
+  --success: 150 80% 40%;
+  --warning: 35 90% 55%;
+  --danger: 350 80% 55%;
+  --info: 200 90% 55%;
+
+  /* =========================================
+     Typography
+     ========================================= */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Outfit', var(--font-sans); /* If we want a fancier heading font */
+
+  /* =========================================
+     Effects & Radius
+     ========================================= */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-blur: 12px;
+
+  /* Transitions */
+  --ease-spring: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --duration-sm: 150ms;
+  --duration-md: 300ms;
+}
+
+/* Dark Mode Preference (or Class) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-1: 222 47% 11%; /* Exceptionally Dark Blue/Slate */
+    --surface-2: 217 33% 17%; /* Card Background */
+    --surface-3: 215 25% 27%; /* Inputs */
+
+    --text-1: 210 40% 98%;
+    --text-2: 215 20% 75%;
+    --text-3: 215 15% 50%;
+
+    --border-1: 215 25% 20%;
+    --border-2: 215 25% 30%;
+
+    --glass-bg: rgba(30, 41, 59, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Global utility class for glass effect */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+}
