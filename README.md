@@ -39,3 +39,16 @@ L'application sera accessible sur http://localhost:3000 (Le port Next.js par dé
 
 ## Architecture
 Voir le document `brain/concept_crm_proprietaire.md` et `brain/implementation_strategy_crm.md` pour les détails de conception.
+Terminal 1 — Base de données
+bashcd ~/Downloads/crm-proprietaire
+docker-compose up -d
+Terminal 2 — Backend
+bashcd ~/Downloads/crm-proprietaire/backend
+npm run start:dev
+Terminal 3 — Frontend
+bashcd ~/Downloads/crm-proprietaire/frontend
+npm run dev
+Puis ouvre http://localhost:3000 dans ton navigateur.
+
+Email : admin@agence.com
+Mot de passe : password123

@@ -8,9 +8,7 @@ export const AgendaPage: React.FC = () => {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        fetchEvents();
-    }, [currentDate]);
+    useEffect(() => { fetchEvents(); }, [currentDate]);
 
     const fetchEvents = async () => {
         setLoading(true);
@@ -18,8 +16,7 @@ export const AgendaPage: React.FC = () => {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
             const start = new Date(year, month, 1);
-            const end = new Date(year, month + 1, 0); // Last day of month
-
+            const end = new Date(year, month + 1, 0);
             const data = await agendaService.getAgenda(start, end);
             setEvents(data);
         } catch (error) {
@@ -30,16 +27,15 @@ export const AgendaPage: React.FC = () => {
     };
 
     return (
-        <div className="h-[calc(100vh-200px)] flex flex-col">
-            <div className="flex justify-between items-center mb-6">
+        <div style={{ padding: '1.5rem', background: '#f8fafc', height: '100vh', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexShrink: 0 }}>
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
-                    <p className="text-gray-500">Vue consolidée de vos rendez-vous et tâches.</p>
+                    <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>Agenda</h1>
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>Vue consolidée de vos rendez-vous et tâches.</p>
                 </div>
-                {loading && <span className="text-sm text-gray-400">Chargement...</span>}
+                {loading && <span style={{ fontSize: '0.8125rem', color: '#9ca3af' }}>Chargement...</span>}
             </div>
-
-            <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 p-0 overflow-hidden">
+            <div style={{ flex: 1, background: '#fff', borderRadius: '0.75rem', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
                 <Calendar
                     events={events}
                     currentDate={currentDate}
@@ -49,3 +45,4 @@ export const AgendaPage: React.FC = () => {
         </div>
     );
 };
+

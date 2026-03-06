@@ -19,7 +19,7 @@ export const DashboardLayout = () => {
     const location = useLocation();
 
     // Pages that should take up the full width/height without padding constraints
-    const isFullWidthPage = location.pathname.startsWith('/opportunities');
+    const isFullWidthPage = location.pathname.startsWith('/opportunities') || location.pathname.startsWith('/actors');
 
     // const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false); // Enable later for mobile
 

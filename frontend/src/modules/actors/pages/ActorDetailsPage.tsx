@@ -6,7 +6,22 @@ import { DocumentList } from '../../documents/components/DocumentList';
 import { ClientTaskList } from '../../tasks/components/ClientTaskList';
 import { CreateTaskModal } from '../../tasks/components/CreateTaskModal';
 import { CreateNoteModal } from '../components/CreateNoteModal';
-import { ArrowLeft, MapPin, Mail, Phone, Globe, FolderOpen, CheckSquare, Plus, FileText } from 'lucide-react';
+import {
+    ArrowLeft, Mail, Phone, MapPin, Globe, FolderOpen,
+    CheckSquare, Plus, FileText, TrendingUp, Activity,
+    Building2, User, MoreHorizontal,
+} from 'lucide-react';
+
+const AVATAR_COLORS = [
+    { bg: '#ede9fe', text: '#6d28d9', border: '#c4b5fd' },
+    { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
+    { bg: '#d1fae5', text: '#047857', border: '#6ee7b7' },
+    { bg: '#fef3c7', text: '#b45309', border: '#fcd34d' },
+    { bg: '#ffe4e6', text: '#be123c', border: '#fda4af' },
+    { bg: '#cffafe', text: '#0e7490', border: '#67e8f9' },
+];
+
+const getAvatarColor = (name: string) => AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 
 export const ActorDetailsPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -14,11 +29,9 @@ export const ActorDetailsPage = () => {
     const [actor, setActor] = useState<Actor | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'timeline' | 'documents' | 'deals' | 'tasks'>('timeline');
-
-    // Modal States
     const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
     const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
-    const [refreshKey, setRefreshKey] = useState(0); // Force refresh of lists
+    const [refreshKey, setRefreshKey] = useState(0);
 
     useEffect(() => {
         if (id) {
@@ -29,195 +42,160 @@ export const ActorDetailsPage = () => {
         }
     }, [id]);
 
-    const handleRefresh = () => {
-        setRefreshKey(prev => prev + 1);
-    };
+    const handleRefresh = () => setRefreshKey(prev => prev + 1);
 
-    if (loading) return <div>Chargement...</div>;
-    if (!actor) return <div>Client introuvable</div>;
+    if (loading) return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '16rem' }}>
+            <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Chargement...</span>
+        </div>
+    );
 
+    if (!actor) return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '16rem' }}>
+            <div style={{ textAlign: 'center' }}>
+                <p style={{ fontWeight: 500, color: '#111827' }}>Client introuvable</p>
+                <button onClick={() => navigate('/actors')} style={{ fontSize: '0.875rem', color: '#4f46e5', marginTop: '0.5rem', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    Retour à la liste
+                </button>
+            </div>
+        </div>
+    );
+
+    const displayName = actor.companyName || `${actor.firstName} ${actor.lastName}`;
     const initials = actor.type === 'INDIVIDUAL'
         ? `${actor.firstName?.[0] || ''}${actor.lastName?.[0] || ''}`
         : actor.companyName?.[0] || '';
+    const avatarColor = getAvatarColor(displayName);
+    const isProspect = actor.tags?.some(t => t.toLowerCase() === 'prospect');
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 font-sans">
-            {/* Header / Breadcrumb */}
-            <div className="flex items-center justify-between mb-6">
-                <button
-                    onClick={() => navigate('/actors')}
-                    className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium rounded-sm"
-                >
-                    <ArrowLeft size={16} />
-                    Retour à la liste
+        <div style={{ padding: '1.5rem', background: '#f8fafc', minHeight: '100vh' }}>
+
+            {/* Top Bar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', fontWeight: 500, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} onClick={() => navigate('/actors')}>
+                    <ArrowLeft size={15} /> Retour à la liste
                 </button>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => setIsTaskModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm rounded-sm"
-                    >
-                        <CheckSquare size={16} />
-                        Tâche
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }} onClick={() => setIsTaskModalOpen(true)}>
+                        <CheckSquare size={14} /> Tâche
                     </button>
-                    <button
-                        onClick={() => setIsNoteModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm rounded-sm"
-                    >
-                        <FileText size={16} />
-                        Note
+                    <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }} onClick={() => setIsNoteModalOpen(true)}>
+                        <FileText size={14} /> Note
                     </button>
-                    <button
-                        onClick={() => navigate('/opportunities/new')}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-700 text-white text-sm font-medium hover:bg-indigo-800 transition-colors shadow-sm rounded-sm"
-                    >
-                        <Plus size={16} />
-                        Opportunité
+                    <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#4f46e5', border: '1px solid #4f46e5', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#fff', cursor: 'pointer' }} onClick={() => navigate('/opportunities/new')}>
+                        <Plus size={14} /> Opportunité
                     </button>
                 </div>
             </div>
 
-            {/* Modals */}
-            <CreateTaskModal
-                isOpen={isTaskModalOpen}
-                onClose={() => setIsTaskModalOpen(false)}
-                actorId={actor.id}
-                onSuccess={() => {
-                    handleRefresh();
-                    setActiveTab('tasks');
-                }}
-            />
-            <CreateNoteModal
-                isOpen={isNoteModalOpen}
-                onClose={() => setIsNoteModalOpen(false)}
-                actorId={actor.id}
-                onSuccess={() => {
-                    handleRefresh();
-                    setActiveTab('timeline');
-                }}
-            />
+            <CreateTaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} actorId={actor.id}
+                onSuccess={() => { handleRefresh(); setActiveTab('tasks'); }} />
+            <CreateNoteModal isOpen={isNoteModalOpen} onClose={() => setIsNoteModalOpen(false)} actorId={actor.id}
+                onSuccess={() => { handleRefresh(); setActiveTab('timeline'); }} />
 
-            <div className="grid grid-cols-12 gap-6 items-start">
+            {/* Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '1.25rem', alignItems: 'start' }}>
 
-                {/* STRICT SIDEBAR */}
-                <div className="col-span-12 lg:col-span-4 space-y-4">
+                {/* ── SIDEBAR ── */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-                    {/* Main Identity Card */}
-                    <div className="bg-white border border-gray-200 shadow-sm rounded-[4px]">
-                        <div className="p-4 border-b border-gray-200 bg-gray-50">
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-700 border border-gray-300 rounded-[2px]">
+                    {/* Identity Card */}
+                    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                        {/* Header */}
+                        <div style={{ padding: '1.25rem', borderBottom: '1px solid #f3f4f6', background: 'linear-gradient(to bottom, #f9fafb, #fff)' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <div style={{ width: '3rem', height: '3rem', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 700, flexShrink: 0, background: avatarColor.bg, color: avatarColor.text, border: `1px solid ${avatarColor.border}` }}>
                                         {initials.toUpperCase()}
                                     </div>
-                                    <div>
-                                        <h1 className="text-lg font-bold text-gray-900 leading-tight">
-                                            {actor.companyName || `${actor.firstName} ${actor.lastName}`}
-                                        </h1>
-                                        <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-                                            {actor.type === 'CORPORATE' ? 'Entreprise' : 'Particulier'}
-                                            <span className="text-gray-300">•</span>
-                                            ID: {actor.id.slice(0, 8)}
+                                    <div style={{ minWidth: 0 }}>
+                                        <h1 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111827', margin: 0, lineHeight: 1.3 }}>{displayName}</h1>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.25rem' }}>
+                                            {actor.type === 'CORPORATE' ? <Building2 size={11} color="#9ca3af" /> : <User size={11} color="#9ca3af" />}
+                                            <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{actor.type === 'CORPORATE' ? 'Entreprise' : 'Particulier'}</span>
+                                            <span style={{ color: '#d1d5db' }}>·</span>
+                                            <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontFamily: 'monospace' }}>{actor.id.slice(0, 8)}</span>
                                         </div>
                                     </div>
                                 </div>
-                                <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide border rounded-[2px] ${(actor.tags?.includes('Prospect') || actor.tags?.includes('prospect'))
-                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                    }`}>
-                                    {(actor.tags?.includes('Prospect') || actor.tags?.includes('prospect')) ? 'Prospect' : 'Actif'}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+                                    <span style={{ padding: '0.125rem 0.5rem', fontSize: '0.625rem', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em', borderRadius: '0.375rem', background: isProspect ? '#fffbeb' : '#ecfdf5', color: isProspect ? '#d97706' : '#059669', border: `1px solid ${isProspect ? '#fde68a' : '#a7f3d0'}` }}>
+                                        {isProspect ? 'Prospect' : 'Actif'}
+                                    </span>
+                                    <button style={{ padding: '0.25rem', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', borderRadius: '0.375rem' }}>
+                                        <MoreHorizontal size={15} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Details List */}
-                        <div className="p-4 space-y-4">
-                            <div className="space-y-3">
-                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest border-b border-gray-100 pb-1">Coordonnées</h3>
-                                <div className="space-y-2">
-                                    <DataRow label="Email" value={actor.email} isLink href={`mailto:${actor.email}`} icon={Mail} />
-                                    <DataRow label="Téléphone" value={actor.phone} isLink href={`tel:${actor.phone}`} icon={Phone} />
-                                    <DataRow label="Adresse" value={actor.address} icon={MapPin} />
-                                    <DataRow label="Source" value={actor.source} icon={Globe} />
-                                </div>
+                        {/* Contact */}
+                        <div style={{ padding: '1.25rem 1.25rem 0.75rem' }}>
+                            <p style={{ fontSize: '0.625rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.1em', margin: '0 0 0.75rem 0' }}>Coordonnées</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                <ContactRow icon={Mail} label="Email" value={actor.email} href={`mailto:${actor.email}`} isLink />
+                                <ContactRow icon={Phone} label="Tél" value={actor.phone} href={`tel:${actor.phone}`} isLink />
+                                <ContactRow icon={MapPin} label="Adresse" value={actor.address} />
+                                <ContactRow icon={Globe} label="Source" value={actor.source} />
                             </div>
+                        </div>
 
-                            <div className="space-y-3 pt-2">
-                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest border-b border-gray-100 pb-1">Classification</h3>
-                                <div className="flex flex-wrap gap-1.5 pt-1">
-                                    {actor.tags && actor.tags.length > 0 ? (
-                                        actor.tags.map(tag => (
-                                            <span key={tag} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-[2px] text-xs font-medium border border-gray-200">
-                                                {tag}
-                                            </span>
-                                        ))
-                                    ) : (
-                                        <span className="text-gray-400 text-xs italic">Non classifié</span>
-                                    )}
-                                </div>
+                        {/* Tags */}
+                        <div style={{ padding: '0.75rem 1.25rem 1.25rem', borderTop: '1px solid #f3f4f6' }}>
+                            <p style={{ fontSize: '0.625rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.1em', margin: '0 0 0.75rem 0' }}>Tags</p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '0.375rem' }}>
+                                {actor.tags && actor.tags.length > 0 ? actor.tags.map(tag => (
+                                    <span key={tag} style={{ padding: '0.125rem 0.5rem', background: '#f3f4f6', color: '#4b5563', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 500, border: '1px solid #e5e7eb' }}>{tag}</span>
+                                )) : <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>Non classifié</span>}
                             </div>
                         </div>
                     </div>
 
-                    {/* Key Metrics (Dense) */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white p-3 border border-gray-200 shadow-sm rounded-[4px] flex flex-col">
-                            <span className="text-xs font-medium text-gray-500 uppercase">Chiffre d'affaires</span>
-                            <span className="text-lg font-bold text-gray-900 mt-1">0,00 €</span>
-                        </div>
-                        <div className="bg-white p-3 border border-gray-200 shadow-sm rounded-[4px] flex flex-col">
-                            <span className="text-xs font-medium text-gray-500 uppercase">Opportunités</span>
-                            <span className="text-lg font-bold text-gray-900 mt-1">0</span>
+                    {/* Metrics */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <MetricCard label="Chiffre d'affaires" value="0,00 €" icon={TrendingUp} color="#4f46e5" bgColor="#eef2ff" />
+                        <MetricCard label="Opportunités" value="0" icon={FolderOpen} color="#7c3aed" bgColor="#f5f3ff" />
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: '1.25rem' }}>
+                        <p style={{ fontSize: '0.625rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.1em', margin: '0 0 0.75rem 0' }}>Actions rapides</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <QuickAction icon={CheckSquare} label="Créer une tâche" onClick={() => setIsTaskModalOpen(true)} />
+                            <QuickAction icon={FileText} label="Ajouter une note" onClick={() => setIsNoteModalOpen(true)} />
+                            <QuickAction icon={Plus} label="Nouvelle opportunité" onClick={() => navigate('/opportunities/new')} primary />
                         </div>
                     </div>
                 </div>
 
-                {/* RIGHT CONTENT AREA */}
-                <div className="col-span-12 lg:col-span-8">
-
-                    {/* Tabs - Strict Underline */}
-                    <div className="flex items-center gap-1 border-b border-gray-200 mb-6 bg-white px-1 pt-1 rounded-t-[4px] border-x border-t">
-                        <TabButton
-                            active={activeTab === 'timeline'}
-                            onClick={() => setActiveTab('timeline')}
-                            label="Activité"
-                            count={null}
-                        />
-                        <TabButton
-                            active={activeTab === 'deals'}
-                            onClick={() => setActiveTab('deals')}
-                            label="Opportunités"
-                            count={0}
-                        />
-                        <TabButton
-                            active={activeTab === 'documents'}
-                            onClick={() => setActiveTab('documents')}
-                            label="Documents"
-                            count={0}
-                        />
-                        <TabButton
-                            active={activeTab === 'tasks'}
-                            onClick={() => setActiveTab('tasks')}
-                            label="Tâches"
-                            count={0}
-                        />
+                {/* ── MAIN CONTENT ── */}
+                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                    {/* Tabs */}
+                    <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', padding: '0 0.5rem', paddingTop: '0.5rem' }}>
+                        {([
+                            { key: 'timeline', label: 'Activité', icon: Activity, count: null },
+                            { key: 'deals', label: 'Opportunités', icon: TrendingUp, count: 0 },
+                            { key: 'documents', label: 'Documents', icon: FileText, count: 0 },
+                            { key: 'tasks', label: 'Tâches', icon: CheckSquare, count: 0 },
+                        ] as const).map(tab => (
+                            <TabButton key={tab.key} active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)} label={tab.label} icon={tab.icon} count={tab.count} />
+                        ))}
                     </div>
 
-                    {/* Tab Content Area */}
-                    <div className="bg-white min-h-[400px]">
+                    {/* Content */}
+                    <div style={{ padding: '1.25rem', minHeight: '420px' }}>
                         {activeTab === 'timeline' && <Timeline key={refreshKey} actorId={actor.id} />}
                         {activeTab === 'documents' && <DocumentList key={refreshKey} actorId={actor.id} />}
                         {activeTab === 'tasks' && <ClientTaskList key={refreshKey} actorId={actor.id} />}
                         {activeTab === 'deals' && (
-                            <div className="bg-white p-12 border border-gray-200 border-dashed rounded-[4px] text-center">
-                                <div className="mx-auto w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                                    <FolderOpen className="text-gray-400" size={24} />
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 2rem', textAlign: 'center' }}>
+                                <div style={{ width: '3.5rem', height: '3.5rem', background: '#f3f4f6', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+                                    <FolderOpen size={24} color="#9ca3af" />
                                 </div>
-                                <h3 className="text-base font-medium text-gray-900">Aucune opportunité</h3>
-                                <p className="text-sm text-gray-500 mt-1 mb-4">Ce dossier est vide pour le moment.</p>
-                                <button
-                                    onClick={() => navigate('/opportunities/new')}
-                                    className="text-sm font-medium text-indigo-700 hover:text-indigo-800 border border-indigo-200 hover:border-indigo-300 bg-indigo-50 px-3 py-1.5 rounded-[2px]"
-                                >
+                                <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', margin: '0 0 0.25rem 0' }}>Aucune opportunité</h3>
+                                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.25rem 0' }}>Aucune opportunité liée à ce contact.</p>
+                                <button onClick={() => navigate('/opportunities/new')} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#4f46e5', border: '1px solid #c7d2fe', background: '#eef2ff', padding: '0.5rem 1rem', borderRadius: '0.5rem', cursor: 'pointer' }}>
                                     + Créer une opportunité
                                 </button>
                             </div>
@@ -229,45 +207,48 @@ export const ActorDetailsPage = () => {
     );
 };
 
-// --- Strict Helper Components ---
-
-const DataRow = ({ label, value, isLink, href }: any) => {
+const ContactRow = ({ icon: Icon, label, value, isLink, href }: any) => {
     if (!value) return null;
     return (
-        <div className="grid grid-cols-[100px_1fr] items-start gap-2 py-1.5 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors px-2 -mx-2 rounded-[2px]">
-            <span className="text-xs text-gray-500 font-semibold pt-0.5">{label}</span>
-            <div className="flex items-center gap-2 min-w-0">
-                {isLink ? (
-                    <a href={href} className="text-sm text-indigo-700 hover:text-indigo-900 hover:underline truncate font-medium">
-                        {value}
-                    </a>
-                ) : (
-                    <span className="text-sm text-gray-800 font-medium truncate select-all">
-                        {value}
-                    </span>
-                )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.375rem 0' }}>
+            <div style={{ width: '1.5rem', height: '1.5rem', borderRadius: '0.375rem', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon size={11} color="#6b7280" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: '0.625rem', color: '#9ca3af', display: 'block', lineHeight: 1 }}>{label}</span>
+                {isLink
+                    ? <a href={href} style={{ fontSize: '0.8125rem', color: '#4f46e5', textDecoration: 'none', fontWeight: 500, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</a>
+                    : <span style={{ fontSize: '0.8125rem', color: '#374151', fontWeight: 500, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</span>
+                }
             </div>
         </div>
     );
 };
 
-const TabButton = ({ active, onClick, label, count }: any) => (
-    <button
-        onClick={onClick}
-        className={`
-            px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 
-            flex items-center gap-2
-            ${active
-                ? 'border-indigo-600 text-indigo-700 bg-indigo-50/10'
-                : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }
-        `}
-    >
-        {label}
-        {(count !== null && count !== undefined) && (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-[2px] font-bold ${active ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>
-                {count}
-            </span>
+const MetricCard = ({ label, value, icon: Icon, color, bgColor }: any) => (
+    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ width: '2rem', height: '2rem', borderRadius: '0.5rem', background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon size={14} color={color} />
+        </div>
+        <div>
+            <span style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', display: 'block', lineHeight: 1 }}>{value}</span>
+            <span style={{ fontSize: '0.6875rem', color: '#9ca3af', marginTop: '0.25rem', display: 'block' }}>{label}</span>
+        </div>
+    </div>
+);
+
+const QuickAction = ({ icon: Icon, label, onClick, primary }: any) => (
+    <button onClick={onClick} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', textAlign: 'left', background: primary ? '#eef2ff' : 'transparent', color: primary ? '#4f46e5' : '#4b5563', border: primary ? '1px solid #c7d2fe' : '1px solid transparent' }}>
+        <Icon size={14} />{label}
+    </button>
+);
+
+const TabButton = ({ active, onClick, label, icon: Icon, count }: any) => (
+    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.625rem 1rem', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', background: 'none', border: 'none', borderBottom: active ? '2px solid #4f46e5' : '2px solid transparent', color: active ? '#4f46e5' : '#6b7280', marginBottom: '-1px' }}>
+        <Icon size={13} />{label}
+        {count !== null && count !== undefined && (
+            <span style={{ fontSize: '0.625rem', padding: '0.125rem 0.375rem', borderRadius: '0.375rem', fontWeight: 700, background: active ? '#e0e7ff' : '#f3f4f6', color: active ? '#4f46e5' : '#6b7280' }}>{count}</span>
         )}
     </button>
 );
+

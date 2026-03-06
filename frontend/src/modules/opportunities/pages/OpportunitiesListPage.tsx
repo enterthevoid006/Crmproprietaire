@@ -10,9 +10,7 @@ export const OpportunitiesListPage = () => {
     const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
     const [error, setError] = useState('');
 
-    useEffect(() => {
-        loadOpportunities();
-    }, []);
+    useEffect(() => { loadOpportunities(); }, []);
 
     const loadOpportunities = async () => {
         try {
@@ -21,82 +19,66 @@ export const OpportunitiesListPage = () => {
             setOpportunities(data);
         } catch (err) {
             setError('Impossible de charger le pipeline.');
-            console.error(err);
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleStatusChange = async (id: string, newStage: string) => {
-        // Optimistic update
-        setOpportunities(prev => prev.map(op =>
-            op.id === id ? { ...op, stage: newStage as any } : op
-        ));
-
+        setOpportunities(prev => prev.map(op => op.id === id ? { ...op, stage: newStage as any } : op));
         try {
             await OpportunityService.update(id, { stage: newStage as any });
-        } catch (err) {
-            console.error('Failed to update stage', err);
-            // Revert on error
+        } catch {
             loadOpportunities();
         }
     };
 
-    if (isLoading) return <div className="p-8 text-center text-gray-500">Chargement du pipeline...</div>;
-    if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
+    if (isLoading) return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '16rem' }}>
+            <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Chargement du pipeline...</span>
+        </div>
+    );
 
     return (
-        <div className="h-screen flex flex-col overflow-hidden relative bg-[#F8FAFC]">
-            {/* Vibrant Background Mesh Gradient */}
-            <div className="absolute inset-0 pointer-events-none z-0" style={{
-                backgroundImage: `
-                    radial-gradient(at 0% 0%, hsla(250,90%,96%,1) 0, transparent 55%), 
-                    radial-gradient(at 50% 0%, hsla(225,95%,94%,1) 0, transparent 50%), 
-                    radial-gradient(at 100% 0%, hsla(340,90%,96%,1) 0, transparent 55%),
-                    radial-gradient(at 0% 100%, hsla(200,90%,96%,1) 0, transparent 50%),
-                    radial-gradient(at 100% 100%, hsla(280,90%,96%,1) 0, transparent 50%)
-                `,
-                backgroundSize: '120% 120%',
-                opacity: 1,
-            }}></div>
-
-            <div className="absolute inset-0 z-0 opacity-[0.015] pointer-events-none" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }}></div>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f8fafc', overflow: 'hidden' }}>
 
             {/* Header */}
-            <div className="flex-none p-6 pb-0 flex justify-between items-center z-20 relative">
+            <div style={{ padding: '1.5rem 1.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: '1px solid #e5e7eb', background: '#fff' }}>
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Pipeline Commercial</h1>
-                    <p className="text-gray-500 text-sm">Gérez vos opportunités et suivez vos performances.</p>
+                    <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>Pipeline Commercial</h1>
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>Gérez vos opportunités et suivez vos performances.</p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="flex bg-gray-100 p-1 rounded-lg">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {/* View toggle */}
+                    <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: '0.5rem', padding: '0.25rem', gap: '0.25rem' }}>
                         <button
                             onClick={() => setViewMode('kanban')}
-                            className={`p-2 rounded-md transition ${viewMode === 'kanban' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            style={{ padding: '0.375rem 0.625rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', background: viewMode === 'kanban' ? '#fff' : 'transparent', color: viewMode === 'kanban' ? '#4f46e5' : '#6b7280', boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}
                         >
-                            <LayoutGrid size={20} />
+                            <LayoutGrid size={16} />
                         </button>
                         <button
                             onClick={() => setViewMode('list')}
-                            className={`p-2 rounded-md transition ${viewMode === 'list' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            style={{ padding: '0.375rem 0.625rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', background: viewMode === 'list' ? '#fff' : 'transparent', color: viewMode === 'list' ? '#4f46e5' : '#6b7280', boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}
                         >
-                            <List size={20} />
+                            <List size={16} />
                         </button>
                     </div>
                     <Link
                         to="/opportunities/new"
-                        className="flex items-center space-x-2 px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition shadow-lg hover:shadow-indigo-200/50 font-semibold text-base"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 1rem', background: '#4f46e5', color: '#fff', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}
                     >
-                        <Plus size={20} />
-                        <span>Nouvelle Opportunité</span>
+                        <Plus size={16} /> Nouvelle Opportunité
                     </Link>
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-hidden p-6">
-                {error && <div className="p-4 bg-red-50 text-red-600 rounded-lg mb-4">{error}</div>}
+            {error && (
+                <div style={{ margin: '1rem 1.5rem 0', padding: '0.75rem 1rem', background: '#fef2f2', color: '#dc2626', borderRadius: '0.5rem', fontSize: '0.875rem' }}>{error}</div>
+            )}
 
+            {/* Content */}
+            <div style={{ flex: 1, overflow: 'hidden', padding: '1.25rem 1.5rem' }}>
                 {viewMode === 'kanban' ? (
                     <PipelineKanbanBoard
                         opportunities={opportunities}
@@ -104,27 +86,25 @@ export const OpportunitiesListPage = () => {
                         onStatusChange={handleStatusChange}
                     />
                 ) : (
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50 text-gray-500 font-medium text-xs uppercase tracking-wider">
-                                <tr>
-                                    <th className="px-6 py-3">Opportunité</th>
-                                    <th className="px-6 py-3">Client</th>
-                                    <th className="px-6 py-3">Montant</th>
-                                    <th className="px-6 py-3">Étape</th>
-                                    <th className="px-6 py-3">Probabilité</th>
+                    <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                                    {['Opportunité', 'Client', 'Montant', 'Étape', 'Probabilité'].map(h => (
+                                        <th key={h} style={{ padding: '0.75rem 1.25rem', textAlign: 'left', fontSize: '0.6875rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                                    ))}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {opportunities.map((opp) => (
-                                    <tr key={opp.id} className="hover:bg-gray-50/50">
-                                        <td className="px-6 py-4 font-medium text-gray-900">{opp.name}</td>
-                                        <td className="px-6 py-4 text-gray-600">{opp.actor?.companyName || 'N/A'}</td>
-                                        <td className="px-6 py-4 font-bold text-gray-900">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(opp.amount)}</td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600 font-medium">{opp.stage}</span>
+                            <tbody>
+                                {opportunities.map(opp => (
+                                    <tr key={opp.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                                        <td style={{ padding: '0.875rem 1.25rem', fontWeight: 600, color: '#111827', fontSize: '0.875rem' }}>{opp.name}</td>
+                                        <td style={{ padding: '0.875rem 1.25rem', color: '#6b7280', fontSize: '0.875rem' }}>{opp.actor?.companyName || 'N/A'}</td>
+                                        <td style={{ padding: '0.875rem 1.25rem', fontWeight: 700, color: '#111827', fontSize: '0.875rem' }}>{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(opp.amount)}</td>
+                                        <td style={{ padding: '0.875rem 1.25rem' }}>
+                                            <span style={{ padding: '0.25rem 0.625rem', background: '#f3f4f6', color: '#374151', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 500 }}>{opp.stage}</span>
                                         </td>
-                                        <td className="px-6 py-4 text-gray-500">{opp.probability}%</td>
+                                        <td style={{ padding: '0.875rem 1.25rem', color: '#6b7280', fontSize: '0.875rem' }}>{opp.probability}%</td>
                                     </tr>
                                 ))}
                             </tbody>
