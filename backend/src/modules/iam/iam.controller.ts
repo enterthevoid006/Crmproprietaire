@@ -1,4 +1,5 @@
 import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { RegisterTenantUseCase, RegisterTenantRequest } from './application/use-cases/register-tenant.use-case';
 import { DomainError } from '../core/domain/domain.error';
 import { AuthService } from './application/services/auth.service';
@@ -22,6 +23,7 @@ export class IamController {
             throw error;
         }
     }
+    @Throttle({ default: { limit: 10, ttl: 60000 } })
     @Post('login')
     async login(@Body() req: { email: string; password: string }) {
         const user = await this.authService.validateUser(req.email, req.password);

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, Trash2, Plus, Send, CheckCircle, XCircle, Lock, Download } from 'lucide-react';
 import { QuoteService, type QuoteItem, QuoteStatus, type Quote } from '../services/quote.service';
+import { ActorService, type Actor } from '../../actors/services/actor.service';
 
 const QuoteEditorPage = () => {
     const navigate = useNavigate();
@@ -10,6 +11,7 @@ const QuoteEditorPage = () => {
 
     const [loading, setLoading] = useState(false);
     const [quote, setQuote] = useState<Quote | null>(null);
+    const [actors, setActors] = useState<Actor[]>([]);
 
     // Form State
     const [actorId, setActorId] = useState('');
@@ -19,6 +21,7 @@ const QuoteEditorPage = () => {
     ]);
 
     useEffect(() => {
+        ActorService.getAll().then(setActors).catch(console.error);
         if (isEditMode) {
             loadQuote();
         }
@@ -226,15 +229,20 @@ const QuoteEditorPage = () => {
                         <p className="text-gray-500 text-sm mt-1">123 Rue de la Paix<br />75000 Paris, France</p>
                     </div>
                     <div>
-                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Client</h3>
-                        <input
-                            type="text"
+                        <h3 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Client</h3>
+                        <select
                             disabled={isReadOnly}
                             value={actorId}
                             onChange={(e) => setActorId(e.target.value)}
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all outline-none text-sm font-medium disabled:cursor-not-allowed"
-                            placeholder="Rechercher un client (ID)..."
-                        />
+                            style={{ width: '100%', padding: '0.75rem', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.5rem', outline: 'none', fontSize: '0.875rem', fontWeight: 500, color: actorId ? '#111827' : '#9ca3af', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                        >
+                            <option value="">-- Sélectionner un client --</option>
+                            {actors.map(a => (
+                                <option key={a.id} value={a.id}>
+                                    {a.type === 'CORPORATE' ? a.companyName : `${a.firstName ?? ''} ${a.lastName ?? ''}`.trim()} {a.email ? `(${a.email})` : ''}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
 

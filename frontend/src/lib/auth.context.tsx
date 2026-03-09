@@ -40,17 +40,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Check for existing token on mount
         const token = localStorage.getItem('accessToken');
         if (token) {
             const decoded = decodeJwt(token);
-            if (decoded) {
-                // Our JWT payload structure might vary, adapting to standard standard
+            const isExpired = decoded?.exp && decoded.exp * 1000 < Date.now();
+            if (decoded && !isExpired) {
                 setUser({
                     id: decoded.sub || decoded.id,
                     email: decoded.email,
                     tenantId: decoded.tenantId,
                 });
+            } else {
+                localStorage.removeItem('accessToken');
             }
         }
         setIsLoading(false);

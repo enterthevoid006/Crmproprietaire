@@ -9,7 +9,7 @@ export class DeleteDocumentUseCase {
     ) { }
 
     async execute(id: string): Promise<void> {
-        const tenantId = TenantContext.getTenantIdOrThrow();
+        TenantContext.getTenantIdOrThrow();
         await this.documentRepo.delete(id);
     }
 }

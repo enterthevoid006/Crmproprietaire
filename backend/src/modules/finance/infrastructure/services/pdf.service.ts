@@ -15,6 +15,7 @@ export class PdfService {
                 const pdfData = Buffer.concat(buffers);
                 resolve(pdfData);
             });
+            doc.on('error', reject);
 
             this.generateHeader(doc, invoice);
             this.generateCustomerInformation(doc, invoice);
@@ -35,6 +36,7 @@ export class PdfService {
                 const pdfData = Buffer.concat(buffers);
                 resolve(pdfData);
             });
+            doc.on('error', reject);
 
             this.generateQuoteHeader(doc, quote);
             this.generateQuoteCustomerInformation(doc, quote);

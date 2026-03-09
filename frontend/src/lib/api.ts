@@ -25,10 +25,8 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Clear token and potentially redirect
             localStorage.removeItem('accessToken');
-            // We might dispatch a custom event or let the AuthContext handle this via state
-            // window.location.href = '/login'; // abrupt, but works for now
+            window.location.href = '/login';
         }
         return Promise.reject(error);
     }

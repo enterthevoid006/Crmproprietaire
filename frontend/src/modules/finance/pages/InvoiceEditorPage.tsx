@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, Trash2, Plus, Send, CheckCircle, AlertTriangle, Lock, Download } from 'lucide-react';
 import { InvoiceService, type InvoiceItem, InvoiceStatus, type Invoice } from '../services/invoice.service';
+import { ActorService, type Actor } from '../../actors/services/actor.service';
 
 const InvoiceEditorPage = () => {
     const navigate = useNavigate();
@@ -10,6 +11,7 @@ const InvoiceEditorPage = () => {
 
     const [loading, setLoading] = useState(false);
     const [invoice, setInvoice] = useState<Invoice | null>(null);
+    const [actors, setActors] = useState<Actor[]>([]);
 
     // Form State
     const [actorId, setActorId] = useState('');
@@ -19,6 +21,7 @@ const InvoiceEditorPage = () => {
     ]);
 
     useEffect(() => {
+        ActorService.getAll().then(setActors).catch(console.error);
         if (isEditMode) {
             loadInvoice();
         }
@@ -76,9 +79,10 @@ const InvoiceEditorPage = () => {
                 dueDate: dueDate ? new Date(dueDate).toISOString() : undefined
             });
             navigate('/finance/invoices');
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            alert('Failed to save invoice');
+            const msg = err?.response?.data?.message || err?.message || 'Erreur inconnue';
+            alert(`Erreur lors de l'enregistrement : ${msg}`);
         } finally {
             setLoading(false);
         }
@@ -216,15 +220,20 @@ const InvoiceEditorPage = () => {
                         <p className="text-gray-500 text-sm mt-1">123 Rue de la Paix<br />75000 Paris, France</p>
                     </div>
                     <div>
-                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Client</h3>
-                        <input
-                            type="text"
+                        <h3 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Client</h3>
+                        <select
                             disabled={isReadOnly}
                             value={actorId}
                             onChange={(e) => setActorId(e.target.value)}
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all outline-none text-sm font-medium disabled:cursor-not-allowed"
-                            placeholder="Rechercher un client (ID)..."
-                        />
+                            style={{ width: '100%', padding: '0.75rem', backgroundColor: isReadOnly ? '#f9fafb' : '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.5rem', outline: 'none', fontSize: '0.875rem', fontWeight: 500, color: actorId ? '#111827' : '#9ca3af', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                        >
+                            <option value="">-- Sélectionner un client --</option>
+                            {actors.map(a => (
+                                <option key={a.id} value={a.id}>
+                                    {a.type === 'CORPORATE' ? a.companyName : `${a.firstName ?? ''} ${a.lastName ?? ''}`.trim()} {a.email ? `(${a.email})` : ''}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
 

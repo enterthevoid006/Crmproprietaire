@@ -18,7 +18,7 @@ export class InvoiceMapper {
             prismaInvoice.createdAt,
             prismaInvoice.updatedAt,
             prismaInvoice.opportunityId || undefined,
-            (prismaInvoice as any).deletedAt,
+            undefined,
             (prismaInvoice as any).actor?.name
         );
     }
@@ -39,7 +39,6 @@ export class InvoiceMapper {
             items: domain.items as any,
             createdAt: domain.createdAt,
             updatedAt: domain.updatedAt,
-            deletedAt: domain.deletedAt || null,
         } as any;
     }
 }

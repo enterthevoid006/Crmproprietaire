@@ -42,7 +42,7 @@ export interface CreateQuoteData {
 
 export const QuoteService = {
     getAll: async (filters: { actorId?: string; opportunityId?: string }): Promise<Quote[]> => {
-        const response = await api.get<Quote[]>('/invoices/quotes/all', { params: filters });
+        const response = await api.get<Quote[]>('/invoices/quotes', { params: filters });
         return response.data;
     },
 

@@ -3,6 +3,7 @@ import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.s
 import { QuoteRepositoryPort } from '../../domain/ports/quote.repository.port';
 import { Quote } from '../../domain/entities/quote.entity';
 import { QuoteMapper } from './quote.mapper';
+import { TenantContext } from '../../../../shared/infrastructure/context/tenant-context';
 
 @Injectable()
 export class PrismaQuoteRepository implements QuoteRepositoryPort {
@@ -34,8 +35,9 @@ export class PrismaQuoteRepository implements QuoteRepositoryPort {
     }
 
     async findById(id: string): Promise<Quote | null> {
-        const quote = await this.prisma.quote.findUnique({
-            where: { id },
+        const tenantId = TenantContext.getTenantIdOrThrow();
+        const quote = await this.prisma.quote.findFirst({
+            where: { id, tenantId },
             include: { actor: true },
         });
         return quote ? QuoteMapper.toDomain(quote) : null;

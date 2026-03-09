@@ -50,9 +50,6 @@ export class PrismaOpportunityRepository implements OpportunityRepositoryPort {
             orderBy: { createdAt: 'desc' },
         });
 
-        console.log(`[DEBUG] Repo.findAll found ${rawOpportunities.length} raw items for tenant ${tenantId}`);
-        rawOpportunities.forEach(op => console.log(`[DEBUG] Item ${op.id} Stage: ${op.stage}, Actor: ${op.actor?.id}`));
-
         return rawOpportunities.map(p => OpportunityMapper.toDomain(p as any));
     }
 }

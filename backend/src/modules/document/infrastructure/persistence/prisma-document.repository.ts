@@ -3,6 +3,7 @@ import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.s
 import { DocumentRepositoryPort } from '../../domain/ports/document.repository.port';
 import { Document } from '../../domain/entities/document.entity';
 import { DocumentMapper } from './document.mapper';
+import { TenantContext } from '../../../../shared/infrastructure/context/tenant-context';
 
 @Injectable()
 export class PrismaDocumentRepository implements DocumentRepositoryPort {
@@ -35,18 +36,17 @@ export class PrismaDocumentRepository implements DocumentRepositoryPort {
     }
 
     async findById(id: string): Promise<Document | null> {
-        const document = await this.prisma.document.findUnique({
-            where: { id },
+        const tenantId = TenantContext.getTenantIdOrThrow();
+        const document = await this.prisma.document.findFirst({
+            where: { id, tenantId },
         });
         return document ? DocumentMapper.toDomain(document) : null;
     }
 
     async delete(id: string): Promise<void> {
-        // TODO: Also delete the file from disk? 
-        // For MVP, we'll keep the file to avoid accidental data loss or complex cleanup middleware.
-        // Just remove the DB entry.
-        await this.prisma.document.delete({
-            where: { id }
+        const tenantId = TenantContext.getTenantIdOrThrow();
+        await this.prisma.document.deleteMany({
+            where: { id, tenantId },
         });
     }
 }

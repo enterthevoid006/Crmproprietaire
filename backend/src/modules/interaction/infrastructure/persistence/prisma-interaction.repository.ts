@@ -62,7 +62,6 @@ export class PrismaInteractionRepository implements InteractionRepositoryPort {
         });
 
         return raw.map(i => InteractionMapper.toDomain(i as any));
-        return raw.map(i => InteractionMapper.toDomain(i as any));
     }
 
     async delete(id: string): Promise<void> {

@@ -17,22 +17,14 @@ export class AuthService {
     ) { }
 
     async validateUser(email: string, pass: string): Promise<any> {
-        console.log(`[AuthService] Attempting login for: ${email}`);
-
-        // Global lookup to find user and their tenant
         const user = await this.userRepo.findByEmailGlobal(email);
 
         if (!user) {
-            console.log(`[AuthService] User not found via global lookup.`);
             return null;
         }
 
-        console.log(`[AuthService] User found: ${user.id}`);
         const props = user.getProps();
-
         const isMatch = await this.hashingService.compare(pass, props.passwordHash);
-
-        console.log(`[AuthService] Password check result: ${isMatch}`);
 
         if (isMatch) {
             return {

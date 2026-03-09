@@ -44,67 +44,7 @@ export class InvoiceController {
         private readonly getQuotePdfUseCase: GetQuotePdfUseCase,
     ) { }
 
-    @Post()
-    async create(@Body() body: any, @Req() req: any) {
-        // Simple validation for MVP
-        if (!body.actorId || !body.items || !Array.isArray(body.items)) {
-            throw new BadRequestException('Invalid invoice data');
-        }
-
-        const command: CreateInvoiceCommand = {
-            tenantId: req.user.tenantId,
-            actorId: body.actorId,
-            opportunityId: body.opportunityId,
-            items: body.items,
-            dueDate: body.dueDate ? new Date(body.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days
-        };
-
-        return this.createInvoiceUseCase.execute(command);
-    }
-
-    @Get(':id')
-    async findOne(@Param('id') id: string, @Req() req: any) {
-        return this.getInvoiceDetailsUseCase.execute(id, req.user.tenantId);
-    }
-
-    @Get()
-    async findAll(
-        @Query('actorId') actorId: string,
-        @Query('opportunityId') opportunityId: string,
-        @Req() req: any
-    ) {
-        const tenantId = req.user.tenantId;
-        return this.getInvoicesUseCase.execute(tenantId, { actorId, opportunityId });
-    }
-
-    @Patch(':id/status')
-    async updateStatus(
-        @Param('id') id: string,
-        @Body('status') status: InvoiceStatus,
-        @Req() req: any
-    ) {
-        // TODO: Validate user has rights to update this invoice (Security Phase related to ownership)
-        // For now, RBAC keeps non-Admins out if we strictly enforced it.
-        // We added @Roles decorators earlier, here we rely on basic Auth.
-        // But the UseCase will fetch the invoice. We should ideally check tenantId there too.
-
-        return this.updateInvoiceStatusUseCase.execute(id, status, req.user);
-    }
-
-    @Get(':id/pdf')
-    async downloadPdf(@Param('id') id: string, @Res() res: Response) {
-        const buffer = await this.getInvoicePdfUseCase.execute(id);
-
-        res.set({
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': `attachment; filename=invoice-${id}.pdf`,
-            'Content-Length': buffer.length,
-        });
-
-        res.end(buffer);
-    }
-
-    // --- QUOTES ENDPOINTS ---
+    // --- QUOTES ENDPOINTS (must be before /:id routes to avoid route conflicts) ---
 
     @Post('/quotes')
     async createQuote(@Body() body: any, @Req() req: any) {
@@ -123,28 +63,13 @@ export class InvoiceController {
         return this.createQuoteUseCase.execute(command);
     }
 
-    @Get('/quotes/all')
+    @Get('/quotes')
     async findAllQuotes(
         @Query('actorId') actorId: string,
         @Query('opportunityId') opportunityId: string,
         @Req() req: any
     ) {
         return this.getQuotesUseCase.execute(req.user.tenantId, { actorId, opportunityId });
-    }
-
-    @Get('/quotes/:id')
-    async findOneQuote(@Param('id') id: string) {
-        return this.getQuoteDetailsUseCase.execute(id);
-    }
-
-    @Patch('/quotes/:id/status')
-    async updateQuoteStatus(
-        @Param('id') id: string,
-        @Body('status') status: QuoteStatus,
-        @Req() req: any
-    ) {
-        // TODO: security check tenant
-        return this.updateQuoteStatusUseCase.execute(id, status);
     }
 
     @Get('/quotes/:id/pdf')
@@ -158,5 +83,74 @@ export class InvoiceController {
         });
 
         res.end(buffer);
+    }
+
+    @Patch('/quotes/:id/status')
+    async updateQuoteStatus(
+        @Param('id') id: string,
+        @Body('status') status: QuoteStatus,
+    ) {
+        return this.updateQuoteStatusUseCase.execute(id, status);
+    }
+
+    @Get('/quotes/:id')
+    async findOneQuote(@Param('id') id: string) {
+        return this.getQuoteDetailsUseCase.execute(id);
+    }
+
+    // --- INVOICE ENDPOINTS ---
+
+    @Post()
+    async create(@Body() body: any, @Req() req: any) {
+        if (!body.actorId || !body.items || !Array.isArray(body.items)) {
+            throw new BadRequestException('Invalid invoice data');
+        }
+
+        const command: CreateInvoiceCommand = {
+            tenantId: req.user.tenantId,
+            actorId: body.actorId,
+            opportunityId: body.opportunityId,
+            items: body.items,
+            dueDate: body.dueDate ? new Date(body.dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        };
+
+        return this.createInvoiceUseCase.execute(command);
+    }
+
+    @Get()
+    async findAll(
+        @Query('actorId') actorId: string,
+        @Query('opportunityId') opportunityId: string,
+        @Req() req: any
+    ) {
+        const tenantId = req.user.tenantId;
+        return this.getInvoicesUseCase.execute(tenantId, { actorId, opportunityId });
+    }
+
+    @Get(':id/pdf')
+    async downloadPdf(@Param('id') id: string, @Res() res: Response) {
+        const buffer = await this.getInvoicePdfUseCase.execute(id);
+
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename=invoice-${id}.pdf`,
+            'Content-Length': buffer.length,
+        });
+
+        res.end(buffer);
+    }
+
+    @Patch(':id/status')
+    async updateStatus(
+        @Param('id') id: string,
+        @Body('status') status: InvoiceStatus,
+        @Req() req: any
+    ) {
+        return this.updateInvoiceStatusUseCase.execute(id, status, req.user);
+    }
+
+    @Get(':id')
+    async findOne(@Param('id') id: string, @Req() req: any) {
+        return this.getInvoiceDetailsUseCase.execute(id, req.user.tenantId);
     }
 }

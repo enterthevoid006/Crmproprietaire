@@ -1,7 +1,5 @@
 import { Module, NestModule, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { IamModule } from './modules/iam/iam.module';
 import { ActorModule } from './modules/actor/actor.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
@@ -43,9 +41,7 @@ import { APP_GUARD } from '@nestjs/core';
     FinanceModule,
     AuditModule,
   ],
-  controllers: [AppController],
   providers: [
-    AppService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
