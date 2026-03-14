@@ -48,22 +48,6 @@ export const RegisterConfirmPage = () => {
                     . Cliquez sur le lien pour activer votre compte.
                 </p>
 
-                <div style={{
-                    background: '#fffbeb',
-                    border: '1px solid #fde68a',
-                    borderRadius: '0.5rem',
-                    padding: '0.875rem 1rem',
-                    fontSize: '0.8125rem',
-                    color: '#92400e',
-                    marginBottom: '1.5rem',
-                    textAlign: 'left',
-                }}>
-                    <strong>En développement :</strong> le token est affiché dans les logs du backend{' '}
-                    (<code style={{ background: '#fef3c7', padding: '0.125rem 0.25rem', borderRadius: '0.25rem' }}>console.log</code>).{' '}
-                    Consultez la console du serveur et appelez{' '}
-                    <code style={{ background: '#fef3c7', padding: '0.125rem 0.25rem', borderRadius: '0.25rem' }}>GET /iam/verify/:token</code>.
-                </div>
-
                 <button
                     onClick={() => navigate('/login')}
                     style={{
