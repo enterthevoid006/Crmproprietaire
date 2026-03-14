@@ -34,7 +34,7 @@ const QuoteEditorPage = () => {
     ).current;
 
     const [loading, setLoading] = useState(false);
-    const [saved, setSaved] = useState(false);
+    const [saved] = useState(false);
     const [quote, setQuote] = useState<Quote | null>(null);
     const [actors, setActors] = useState<Actor[]>([]);
     const [tenantProfile, setTenantProfile] = useState<TenantProfile | null>(null);
