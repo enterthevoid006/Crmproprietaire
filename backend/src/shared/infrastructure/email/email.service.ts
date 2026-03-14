@@ -11,10 +11,10 @@ export class EmailService {
     constructor(private configService: ConfigService) {
         const user = this.configService.get<string>('MAIL_USER') ?? '';
         const pass = this.configService.get<string>('MAIL_PASSWORD') ?? '';
-        this.from = user;
+        this.from = 'noreply@bonjour-crm.fr';
 
         this.transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
+            host: 'smtp-relay.brevo.com',
             port: 587,
             secure: false,
             auth: { user, pass },
