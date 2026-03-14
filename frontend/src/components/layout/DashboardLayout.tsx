@@ -6,8 +6,9 @@ import {
     LayoutDashboard, Users, LogOut, Building2, FolderOpen,
     CheckSquare, Calendar, Euro, FileText, Settings, Bell,
     CheckCheck, AlertCircle, Clock, FileWarning, UserPlus, X,
-    Search, Loader2,
+    Search, Loader2, Menu,
 } from 'lucide-react';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -147,7 +148,7 @@ const NotificationBell: React.FC = () => {
             {open && (
                 <div style={{
                     position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-                    width: '360px',
+                    width: 'min(360px, calc(100vw - 2rem))',
                     background: '#fff',
                     border: '1px solid #e5e7eb',
                     borderRadius: '0.75rem',
@@ -406,7 +407,7 @@ const GlobalSearch: React.FC = () => {
             {open && results && (
                 <div style={{
                     position: 'absolute', top: 'calc(100% + 6px)', left: 0,
-                    width: '380px',
+                    width: 'min(380px, calc(100vw - 2rem))',
                     background: '#fff',
                     border: '1px solid #e5e7eb',
                     borderRadius: '0.75rem',
@@ -517,6 +518,13 @@ export const DashboardLayout = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const isMobile = useIsMobile();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    // Auto-close sidebar when navigating (mobile)
+    useEffect(() => {
+        setSidebarOpen(false);
+    }, [location.pathname]);
 
     const isFullWidthPage = location.pathname.startsWith('/opportunities') || location.pathname.startsWith('/actors');
 
@@ -536,15 +544,32 @@ export const DashboardLayout = () => {
     ];
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', background: 'hsl(var(--surface-1))' }}>
+        <div style={{ display: 'flex', minHeight: '100vh', background: 'hsl(var(--surface-1))', overflow: 'hidden' }}>
+
+            {/* Mobile overlay */}
+            {isMobile && sidebarOpen && (
+                <div
+                    onClick={() => setSidebarOpen(false)}
+                    style={{
+                        position: 'fixed', inset: 0,
+                        background: 'rgba(0,0,0,0.5)',
+                        zIndex: 49,
+                    }}
+                />
+            )}
+
             {/* Sidebar */}
             <aside style={{
                 width: '260px',
                 background: 'hsl(var(--surface-2))',
                 borderRight: '1px solid var(--border-1)',
                 display: 'flex', flexDirection: 'column',
-                position: 'fixed', height: '100vh', zIndex: 20,
-            }} className="hidden-mobile">
+                position: 'fixed', height: '100vh', zIndex: 50,
+                transform: isMobile
+                    ? (sidebarOpen ? 'translateX(0)' : 'translateX(-260px)')
+                    : 'translateX(0)',
+                transition: 'transform 0.3s ease',
+            }}>
 
                 <div style={{ padding: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <div style={{
@@ -626,23 +651,44 @@ export const DashboardLayout = () => {
             </aside>
 
             {/* Main content */}
-            <main style={{ flex: 1, marginLeft: '260px', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-                {/* Top bar with search + notification bell */}
+            <main style={{
+                flex: 1,
+                marginLeft: isMobile ? 0 : '260px',
+                minHeight: '100vh',
+                display: 'flex', flexDirection: 'column',
+                minWidth: 0,
+            }}>
+                {/* Top bar */}
                 <div style={{
                     height: '52px', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-                    padding: '0 1.5rem', gap: '0.75rem',
+                    display: 'flex', alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0 1rem 0 1.25rem', gap: '0.75rem',
                     background: '#fff',
                     borderBottom: '1px solid #f3f4f6',
                     position: 'sticky', top: 0, zIndex: 30,
                 }}>
-                    <GlobalSearch />
+                    {isMobile ? (
+                        <button
+                            onClick={() => setSidebarOpen(o => !o)}
+                            aria-label="Menu"
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center',
+                                padding: '0.25rem', color: '#6b7280', flexShrink: 0,
+                            }}
+                        >
+                            <Menu size={22} />
+                        </button>
+                    ) : (
+                        <GlobalSearch />
+                    )}
                     <NotificationBell />
                 </div>
 
                 <div style={isFullWidthPage
                     ? { width: '100%', flex: 1 }
-                    : { padding: '2rem', maxWidth: '1200px', width: '100%', margin: '0 auto' }
+                    : { padding: isMobile ? '1rem' : '2rem', maxWidth: '1200px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }
                 }>
                     <Outlet />
                 </div>

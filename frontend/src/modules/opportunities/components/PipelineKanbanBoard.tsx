@@ -60,6 +60,7 @@ export const PipelineKanbanBoard = ({ opportunities, isLoading, onStatusChange }
             overflowY: 'hidden',
             paddingBottom: '1rem',
             alignItems: 'flex-start',
+            WebkitOverflowScrolling: 'touch',
         }}>
             {columns.map(column => (
                 <div

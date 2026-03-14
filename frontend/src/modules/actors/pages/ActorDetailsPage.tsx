@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useIsMobile } from '../../../hooks/useIsMobile';
 import { ActorService, type Actor } from '../services/actor.service';
 import { Timeline } from '../../interactions/components/Timeline';
 import { DocumentList } from '../../documents/components/DocumentList';
@@ -28,6 +29,7 @@ const getAvatarColor = (name: string) => AVATAR_COLORS[name.charCodeAt(0) % AVAT
 export const ActorDetailsPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
     const [actor, setActor] = useState<Actor | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'timeline' | 'documents' | 'deals' | 'tasks' | 'quotes' | 'invoices'>('timeline');
@@ -190,7 +192,7 @@ export const ActorDetailsPage = () => {
                 onSuccess={() => { handleRefresh(); setActiveTab('timeline'); }} />
 
             {/* Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '1.25rem', alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '320px 1fr', gap: '1.25rem', alignItems: 'start' }}>
 
                 {/* ── SIDEBAR ── */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -295,8 +297,8 @@ export const ActorDetailsPage = () => {
 
                 {/* ── MAIN CONTENT ── */}
                 <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-                    {/* Tabs */}
-                    <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', padding: '0 0.5rem', paddingTop: '0.5rem' }}>
+                    {/* Tabs — scrollable horizontally on mobile */}
+                    <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', padding: '0 0.5rem', paddingTop: '0.5rem', overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
                         {([
                             { key: 'timeline',  label: 'Activité',      icon: Activity,    count: null },
                             { key: 'deals',     label: 'Opportunités',  icon: TrendingUp,  count: 0 },
@@ -372,7 +374,7 @@ const QuickAction = ({ icon: Icon, label, onClick, primary }: any) => (
 );
 
 const TabButton = ({ active, onClick, label, icon: Icon, count }: any) => (
-    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.625rem 1rem', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', background: 'none', border: 'none', borderBottom: active ? '2px solid #4f46e5' : '2px solid transparent', color: active ? '#4f46e5' : '#6b7280', marginBottom: '-1px' }}>
+    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.625rem 0.75rem', fontSize: '0.8125rem', fontWeight: 500, cursor: 'pointer', background: 'none', border: 'none', borderBottom: active ? '2px solid #4f46e5' : '2px solid transparent', color: active ? '#4f46e5' : '#6b7280', marginBottom: '-1px', whiteSpace: 'nowrap', flexShrink: 0 }}>
         <Icon size={13} />{label}
         {count !== null && count !== undefined && (
             <span style={{ fontSize: '0.625rem', padding: '0.125rem 0.375rem', borderRadius: '0.375rem', fontWeight: 700, background: active ? '#e0e7ff' : '#f3f4f6', color: active ? '#4f46e5' : '#6b7280' }}>{count}</span>

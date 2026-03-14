@@ -5,6 +5,7 @@ import { TaskService, type Task } from '../modules/tasks/services/task.service';
 import { OpportunityService, type Opportunity } from '../modules/opportunities/services/opportunity.service';
 import { ActorService, type Actor } from '../modules/actors/services/actor.service';
 import { InvoiceService, type Invoice } from '../modules/finance/services/invoice.service';
+import { useIsMobile } from '../hooks/useIsMobile';
 import {
     Users, FolderOpen, CheckSquare, Euro,
     TrendingUp, AlertCircle, ArrowRight, Calendar
@@ -15,6 +16,7 @@ const fmt = (n: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', c
 export const DashboardPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
 
     const [tasks, setTasks] = useState<Task[]>([]);
     const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -61,7 +63,7 @@ export const DashboardPage = () => {
 
             {/* Header */}
             <div style={{ marginBottom: '1.75rem' }}>
-                <h1 style={{ fontSize: '1.375rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+                <h1 style={{ fontSize: isMobile ? '1.125rem' : '1.375rem', fontWeight: 700, color: '#111827', margin: 0 }}>
                     {greeting}, {firstName} 👋
                 </h1>
                 <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>
@@ -69,12 +71,17 @@ export const DashboardPage = () => {
                 </p>
             </div>
 
-            {/* KPI Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                <KpiCard icon={Users} label="Clients" value={String(actors.length)} sub="contacts actifs" color="#4f46e5" bg="#eef2ff" onClick={() => navigate('/actors')} />
-                <KpiCard icon={TrendingUp} label="Pipeline" value={fmt(pipelineTotal)} sub="en cours" color="#0891b2" bg="#ecfeff" onClick={() => navigate('/opportunities')} />
-                <KpiCard icon={CheckSquare} label="Tâches" value={String(tasksTodo.length)} sub={tasksOverdue.length > 0 ? `${tasksOverdue.length} en retard` : 'à faire'} color={tasksOverdue.length > 0 ? '#dc2626' : '#047857'} bg={tasksOverdue.length > 0 ? '#fef2f2' : '#ecfdf5'} onClick={() => navigate('/tasks')} />
-                <KpiCard icon={Euro} label="En attente" value={fmt(pendingInvoices)} sub="factures envoyées" color="#b45309" bg="#fffbeb" onClick={() => navigate('/finance/invoices')} />
+            {/* KPI Cards — 4 cols desktop / 2 cols mobile */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+                gap: isMobile ? '0.75rem' : '1rem',
+                marginBottom: '1.5rem',
+            }}>
+                <KpiCard icon={Users} label="Clients" value={String(actors.length)} sub="contacts actifs" color="#4f46e5" bg="#eef2ff" onClick={() => navigate('/actors')} isMobile={isMobile} />
+                <KpiCard icon={TrendingUp} label="Pipeline" value={fmt(pipelineTotal)} sub="en cours" color="#0891b2" bg="#ecfeff" onClick={() => navigate('/opportunities')} isMobile={isMobile} />
+                <KpiCard icon={CheckSquare} label="Tâches" value={String(tasksTodo.length)} sub={tasksOverdue.length > 0 ? `${tasksOverdue.length} en retard` : 'à faire'} color={tasksOverdue.length > 0 ? '#dc2626' : '#047857'} bg={tasksOverdue.length > 0 ? '#fef2f2' : '#ecfdf5'} onClick={() => navigate('/tasks')} isMobile={isMobile} />
+                <KpiCard icon={Euro} label="En attente" value={fmt(pendingInvoices)} sub="factures envoyées" color="#b45309" bg="#fffbeb" onClick={() => navigate('/finance/invoices')} isMobile={isMobile} />
             </div>
 
             {/* Quick Actions */}
@@ -96,8 +103,12 @@ export const DashboardPage = () => {
                 </div>
             </div>
 
-            {/* Bottom Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+            {/* Bottom Grid — 2 cols desktop / 1 col mobile */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                gap: '1.25rem',
+            }}>
 
                 {/* Urgent Tasks */}
                 <SectionCard title="Tâches prioritaires" icon={AlertCircle} iconColor="#dc2626" onSeeAll={() => navigate('/tasks')}>
@@ -192,18 +203,18 @@ export const DashboardPage = () => {
     );
 };
 
-const KpiCard = ({ icon: Icon, label, value, sub, color, bg, onClick }: any) => (
-    <div onClick={onClick} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.75rem', padding: '1.25rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', transition: 'all 0.15s' }}
+const KpiCard = ({ icon: Icon, label, value, sub, color, bg, onClick, isMobile }: any) => (
+    <div onClick={onClick} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.75rem', padding: isMobile ? '1rem' : '1.25rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', transition: 'all 0.15s' }}
         onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)'; }}
         onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; }}
     >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
+            <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
             <div style={{ width: '2rem', height: '2rem', background: bg, borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon size={14} color={color} />
             </div>
         </div>
-        <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', margin: '0 0 0.25rem 0', lineHeight: 1 }}>{value}</p>
+        <p style={{ fontSize: isMobile ? '1.125rem' : '1.5rem', fontWeight: 700, color: '#111827', margin: '0 0 0.25rem 0', lineHeight: 1 }}>{value}</p>
         <p style={{ fontSize: '0.75rem', color, margin: 0, fontWeight: 500 }}>{sub}</p>
     </div>
 );

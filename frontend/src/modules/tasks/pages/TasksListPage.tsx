@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TaskService, type Task } from '../services/task.service';
+import { useIsMobile } from '../../../hooks/useIsMobile';
 import { Plus, CheckCircle, Circle, Calendar, Users, Trash2, Flag, Filter } from 'lucide-react';
 
 type FilterStatus = 'ALL' | 'TODO' | 'DONE';
@@ -14,6 +15,7 @@ const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string
 
 export const TasksListPage = () => {
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
@@ -106,7 +108,7 @@ export const TasksListPage = () => {
             <div style={{ maxWidth: '760px', margin: '0 auto' }}>
 
                 {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.5rem' }}>
                     <div>
                         <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>Tâches</h1>
                         <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>
@@ -115,7 +117,7 @@ export const TasksListPage = () => {
                     </div>
                     <button
                         onClick={() => setIsCreating(!isCreating)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 1rem', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', padding: '0.5rem 1rem', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}
                     >
                         <Plus size={16} /> Nouvelle Tâche
                     </button>

@@ -3,10 +3,12 @@ import { useAuth } from '../lib/auth.context';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, Loader2, ArrowRight } from 'lucide-react';
 import { ActorService } from '../modules/actors/services/actor.service';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 export const LoginPage = () => {
     const { login } = useAuth();
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -64,11 +66,11 @@ export const LoginPage = () => {
             <div className="glass-panel" style={{
                 width: '100%',
                 maxWidth: '420px',
-                padding: '2.5rem',
+                padding: isMobile ? '1.5rem 1.25rem' : '2.5rem',
                 borderRadius: 'var(--radius-xl)',
                 boxShadow: 'var(--shadow-xl)',
                 zIndex: 1,
-                position: 'relative'
+                position: 'relative',
             }}>
                 <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
                     <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Bonjour</h1>

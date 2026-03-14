@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 import api from '../lib/api';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 export const RegisterPage = () => {
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
 
     const [tenantName, setTenantName] = useState('');
     const [email, setEmail] = useState('');
@@ -71,7 +73,7 @@ export const RegisterPage = () => {
                 border: '1px solid #e5e7eb',
                 borderRadius: '1rem',
                 boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-                padding: '2.5rem',
+                padding: isMobile ? '1.5rem 1.25rem' : '2.5rem',
                 position: 'relative',
                 zIndex: 1,
             }}>
