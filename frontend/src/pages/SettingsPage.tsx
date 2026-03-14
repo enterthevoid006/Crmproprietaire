@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, Upload, Check, Building2, FileText, ImageIcon, Users, Trash2, Send, UserPlus } from 'lucide-react';
-import { TenantService, type TenantProfile } from '../lib/tenant.service';
+import { Save, Upload, Check, Building2, FileText, ImageIcon, Users, Trash2, Send } from 'lucide-react';
+import { TenantService } from '../lib/tenant.service';
 import { useAuth } from '../lib/auth.context';
 import api from '../lib/api';
 

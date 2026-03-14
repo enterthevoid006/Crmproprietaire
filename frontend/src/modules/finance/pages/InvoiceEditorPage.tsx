@@ -130,7 +130,7 @@ const InvoiceEditorPage = () => {
     };
 
     // ── Styles ────────────────────────────────────────────────────────────────
-    const btn = (bg: string, hoverBg: string, extra?: React.CSSProperties): React.CSSProperties => ({
+    const btn = (bg: string, _hoverBg: string, extra?: React.CSSProperties): React.CSSProperties => ({
         display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
         padding: '0.5rem 1rem', border: 'none', borderRadius: '0.5rem',
         fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',

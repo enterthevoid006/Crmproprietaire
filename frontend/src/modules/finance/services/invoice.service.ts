@@ -28,6 +28,7 @@ export interface Invoice {
     taxAmount: number;
     total: number;
     actorId: string;
+    actorName?: string;
     opportunityId?: string;
     createdAt: string;
 }

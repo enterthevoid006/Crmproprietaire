@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { QuoteService, type Quote, QuoteStatus } from '../../finance/services/quote.service';
+import { QuoteService, type Quote } from '../../finance/services/quote.service';
 import { Plus, ExternalLink, FileText } from 'lucide-react';
 
 // ─── Status badge config ───────────────────────────────────────────────────────

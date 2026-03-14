@@ -91,11 +91,6 @@ const QuoteEditorPage = () => {
         });
     }, [id]);
 
-    const flashSaved = () => {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
-    };
-
     // Computed totals
     const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
     const taxAmount = items.reduce(

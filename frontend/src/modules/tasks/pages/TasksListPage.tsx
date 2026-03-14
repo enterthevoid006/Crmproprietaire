@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TaskService, type Task } from '../services/task.service';
-import { Plus, CheckCircle, Circle, Calendar, AlertCircle, Users, Trash2, Flag, Filter } from 'lucide-react';
+import { Plus, CheckCircle, Circle, Calendar, Users, Trash2, Flag, Filter } from 'lucide-react';
 
 type FilterStatus = 'ALL' | 'TODO' | 'DONE';
 type SortKey = 'date' | 'priority';
@@ -212,7 +212,7 @@ export const TasksListPage = () => {
                                 {/* Content */}
                                 <div style={{ flex: 1, minWidth: 0, cursor: task.actorId ? 'pointer' : 'default' }}
                                     onClick={() => task.actorId && navigate(`/actors/${task.actorId}`)}>
-                                    <p style={{ fontWeight: 500, color: '#111827', fontSize: '0.9375rem', margin: 0, textDecoration: task.status === 'DONE' ? 'line-through' : 'none', color: task.status === 'DONE' ? '#9ca3af' : '#111827' }}>
+                                    <p style={{ fontWeight: 500, fontSize: '0.9375rem', margin: 0, textDecoration: task.status === 'DONE' ? 'line-through' : 'none', color: task.status === 'DONE' ? '#9ca3af' : '#111827' }}>
                                         {task.title}
                                     </p>
                                     {task.description && (

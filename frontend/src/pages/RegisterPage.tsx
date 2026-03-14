@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Mail, Lock, Loader2, ArrowRight, CheckCircle } from 'lucide-react';
+import { Building2, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 import api from '../lib/api';
 
 export const RegisterPage = () => {

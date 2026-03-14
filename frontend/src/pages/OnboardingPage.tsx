@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../lib/auth.context';
 import { ActorService, ActorType } from '../modules/actors/services/actor.service';
 import { OpportunityService } from '../modules/opportunities/services/opportunity.service';
 import { Loader2, ArrowRight, Building2 } from 'lucide-react';
@@ -13,7 +12,6 @@ const STEPS = [
 ];
 
 export const OnboardingPage = () => {
-    const { user } = useAuth();
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);

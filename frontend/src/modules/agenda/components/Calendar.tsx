@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarEventType } from '../services/agenda.service';
 import type { CalendarEvent } from '../services/agenda.service';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 

@@ -6,8 +6,8 @@ import { OpportunityService, type Opportunity } from '../modules/opportunities/s
 import { ActorService, type Actor } from '../modules/actors/services/actor.service';
 import { InvoiceService, type Invoice } from '../modules/finance/services/invoice.service';
 import {
-    Users, FolderOpen, CheckSquare, Euro, Plus,
-    TrendingUp, Clock, AlertCircle, ArrowRight, Calendar
+    Users, FolderOpen, CheckSquare, Euro,
+    TrendingUp, AlertCircle, ArrowRight, Calendar
 } from 'lucide-react';
 
 const fmt = (n: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
