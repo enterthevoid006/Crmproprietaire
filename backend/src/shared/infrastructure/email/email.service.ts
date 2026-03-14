@@ -1,16 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class EmailService {
     private readonly logger = new Logger(EmailService.name);
-    private readonly resend: Resend;
-    private readonly from = 'onboarding@resend.dev';
+    private readonly transporter: nodemailer.Transporter;
+    private readonly from: string;
 
     constructor(private configService: ConfigService) {
-        const apiKey = this.configService.get<string>('RESEND_API_KEY') ?? '';
-        this.resend = new Resend(apiKey);
+        const user = this.configService.get<string>('MAIL_USER') ?? '';
+        const pass = this.configService.get<string>('MAIL_PASSWORD') ?? '';
+        this.from = user;
+
+        this.transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false,
+            auth: { user, pass },
+        });
     }
 
     async sendVerificationEmail(to: string, token: string): Promise<void> {
@@ -70,16 +78,12 @@ export class EmailService {
 </body>
 </html>`;
 
-        const { error } = await this.resend.emails.send({
+        await this.transporter.sendMail({
             from: this.from,
             to,
             subject: 'Activez votre compte CRM',
             html,
         });
-
-        if (error) {
-            throw new Error(`Resend error: ${error.message}`);
-        }
 
         this.logger.log(`Verification email sent to ${to}`);
     }
@@ -145,16 +149,12 @@ export class EmailService {
 </body>
 </html>`;
 
-        const { error } = await this.resend.emails.send({
+        await this.transporter.sendMail({
             from: this.from,
             to,
             subject: `Invitation à rejoindre ${tenantName} sur CRM Propriétaire`,
             html,
         });
-
-        if (error) {
-            throw new Error(`Resend error: ${error.message}`);
-        }
 
         this.logger.log(`Invitation email sent to ${to} for tenant ${tenantName}`);
     }
@@ -188,12 +188,12 @@ export class EmailService {
   </table>
 </body></html>`;
 
-        const { error } = await this.resend.emails.send({
-            from: this.from, to,
+        await this.transporter.sendMail({
+            from: this.from,
+            to,
             subject: `⚠️ Tâche en retard : ${taskTitle}`,
             html,
         });
-        if (error) throw new Error(`Resend error: ${error.message}`);
         this.logger.log(`Task overdue reminder sent to ${to}`);
     }
 
@@ -228,12 +228,12 @@ export class EmailService {
   </table>
 </body></html>`;
 
-        const { error } = await this.resend.emails.send({
-            from: this.from, to,
+        await this.transporter.sendMail({
+            from: this.from,
+            to,
             subject: `🔴 Facture impayée : ${invoiceNumber} (${formattedTotal})`,
             html,
         });
-        if (error) throw new Error(`Resend error: ${error.message}`);
         this.logger.log(`Invoice overdue reminder sent to ${to}`);
     }
 }
