@@ -16,7 +16,7 @@ export const AgendaPage: React.FC = () => {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
             const start = new Date(year, month, 1);
-            const end = new Date(year, month + 1, 0);
+            const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
             const data = await agendaService.getAgenda(start, end);
             setEvents(data);
         } catch (error) {

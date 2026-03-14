@@ -56,14 +56,30 @@ export class PrismaUserRepository implements UserRepositoryPort {
         const tenantId = TenantContext.getTenantIdOrThrow();
 
         const raw = await this.prisma.user.findFirst({
-            where: {
-                id,
-                tenantId // AUTO-FILTER
-            },
+            where: { id, tenantId },
         });
 
         if (!raw) return null;
 
         return UserMapper.toDomain(raw);
+    }
+
+    async findByVerificationToken(token: string): Promise<User | null> {
+        // Bypass TenantContext — called before any session exists
+        const raw = await this.prisma.user.findUnique({
+            where: { emailVerificationToken: token },
+        });
+
+        if (!raw) return null;
+
+        return UserMapper.toDomain(raw);
+    }
+
+    async verifyEmail(userId: string): Promise<void> {
+        // Bypass TenantContext — called from public verification endpoint
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { emailVerified: true, emailVerificationToken: null },
+        });
     }
 }

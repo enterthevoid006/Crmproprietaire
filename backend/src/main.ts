@@ -9,9 +9,14 @@ async function bootstrap() {
   // Security Headers
   app.use(helmet());
 
-  // CORS (Allow Frontend)
+  // CORS — origin driven by FRONTEND_URL env var (validated in env.validation.ts)
+  const allowedOrigins = [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+  ];
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5174', 'http://127.0.0.1:5174', 'http://localhost:5175'], // Allow common local dev ports
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });

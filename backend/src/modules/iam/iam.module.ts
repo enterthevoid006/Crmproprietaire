@@ -8,6 +8,7 @@ import { PrismaTenantRepository } from './infrastructure/persistence/prisma-tena
 import { USER_REPOSITORY } from './domain/ports/user.repository.port';
 import { TENANT_REPOSITORY } from './domain/ports/tenant.repository.port';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
+import { EmailService } from '../../shared/infrastructure/email/email.service';
 import { AuthService } from './application/services/auth.service';
 import { HashingService } from './application/services/hashing.service';
 import { JwtStrategy } from './infrastructure/authentication/jwt.strategy';
@@ -27,6 +28,7 @@ import { JwtStrategy } from './infrastructure/authentication/jwt.strategy';
     controllers: [IamController],
     providers: [
         PrismaService,
+        EmailService,
         RegisterTenantUseCase,
         AuthService,
         HashingService,

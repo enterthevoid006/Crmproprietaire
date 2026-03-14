@@ -1,28 +1,32 @@
 import { useState, useEffect } from 'react';
 import { TaskService, type Task } from '../services/task.service';
-import { CheckCircle, Circle, Trash2, Plus, Calendar } from 'lucide-react';
+import { CheckCircle, Circle, Trash2, Plus, Calendar, CheckSquare } from 'lucide-react';
 
 interface ClientTaskListProps {
     actorId: string;
+    onAddClick?: () => void;
 }
 
-export const ClientTaskList = ({ actorId }: ClientTaskListProps) => {
+const PRIORITY_CONFIG: Record<'HIGH' | 'MEDIUM' | 'LOW', { label: string; color: string; bg: string; border: string }> = {
+    HIGH:   { label: 'Haute',   color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+    MEDIUM: { label: 'Moyenne', color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
+    LOW:    { label: 'Faible',  color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },
+};
+
+const isOverdue = (dueDate?: string) =>
+    dueDate && new Date(dueDate) < new Date() ? true : false;
+
+export const ClientTaskList = ({ actorId, onAddClick }: ClientTaskListProps) => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isAdding, setIsAdding] = useState(false);
-    const [newTitle, setNewTitle] = useState('');
-    const [newDate, setNewDate] = useState('');
+    const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-    useEffect(() => {
-        loadTasks();
-    }, [actorId]);
+    useEffect(() => { loadTasks(); }, [actorId]);
 
     const loadTasks = async () => {
         try {
             const allTasks = await TaskService.getAll();
-            // Filter by actorId manually since backend getAll returns all tenant tasks
-            const clientTasks = allTasks.filter(t => t.actorId === actorId);
-            setTasks(clientTasks);
+            setTasks(allTasks.filter(t => t.actorId === actorId));
         } catch (err) {
             console.error('Failed to load tasks', err);
         } finally {
@@ -30,128 +34,240 @@ export const ClientTaskList = ({ actorId }: ClientTaskListProps) => {
         }
     };
 
-    const handleCreate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            await TaskService.create({
-                title: newTitle,
-                dueDate: newDate ? new Date(newDate).toISOString() : undefined,
-                actorId,
-                priority: 'MEDIUM'
-            });
-            setNewTitle('');
-            setNewDate('');
-            setIsAdding(false);
-            loadTasks();
-        } catch (err) {
-            console.error('Failed to create task', err);
-        }
-    };
-
     const toggleStatus = async (task: Task) => {
         const newStatus = task.status === 'DONE' ? 'TODO' : 'DONE';
+        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
         try {
             await TaskService.updateStatus(task.id, newStatus);
-            // Optimistic update
-            setTasks(tasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
         } catch (err) {
             console.error('Failed to update status', err);
-            loadTasks(); // Revert on error
+            loadTasks();
         }
     };
 
     const handleDelete = async (id: string) => {
         if (!confirm('Supprimer cette tâche ?')) return;
+        setTasks(prev => prev.filter(t => t.id !== id));
         try {
             await TaskService.delete(id);
-            setTasks(tasks.filter(t => t.id !== id));
         } catch (err) {
             console.error('Failed to delete task', err);
+            loadTasks();
         }
     };
 
-    if (loading) return <div>Chargement des tâches...</div>;
+    const done = tasks.filter(t => t.status === 'DONE').length;
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <CheckCircle size={18} />
-                    Tâches
-                </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '400px' }}>
+
+            {/* Header */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1.25rem 1.5rem',
+                borderBottom: '1px solid #f3f4f6',
+            }}>
+                <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <CheckSquare size={16} color="#4f46e5" />
+                        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>
+                            Tâches
+                        </h3>
+                        {tasks.length > 0 && (
+                            <span style={{
+                                fontSize: '0.6875rem', fontWeight: 700,
+                                padding: '0.125rem 0.5rem',
+                                borderRadius: '9999px',
+                                background: '#eef2ff', color: '#4f46e5',
+                                border: '1px solid #c7d2fe',
+                            }}>
+                                {done}/{tasks.length}
+                            </span>
+                        )}
+                    </div>
+                    {tasks.length > 0 && (
+                        <p style={{ margin: '0.125rem 0 0 0', fontSize: '0.8125rem', color: '#9ca3af' }}>
+                            {done === tasks.length && tasks.length > 0 ? 'Toutes terminées 🎉' : `${tasks.length - done} restante${tasks.length - done > 1 ? 's' : ''}`}
+                        </p>
+                    )}
+                </div>
                 <button
-                    onClick={() => setIsAdding(!isAdding)}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
+                    onClick={onAddClick}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        padding: '0.5rem 1rem',
+                        background: '#4f46e5',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        boxShadow: '0 2px 6px rgba(79,70,229,0.3)',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#4338ca')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '#4f46e5')}
                 >
-                    <Plus size={16} />
+                    <Plus size={15} />
                     Ajouter
                 </button>
             </div>
 
-            {isAdding && (
-                <form onSubmit={handleCreate} className="p-4 border-b border-gray-100 bg-blue-50/50">
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            placeholder="Nouvelle tâche..."
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={newTitle}
-                            onChange={e => setNewTitle(e.target.value)}
-                            autoFocus
-                            required
-                        />
-                        <input
-                            type="date"
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={newDate}
-                            onChange={e => setNewDate(e.target.value)}
-                        />
+            {/* List */}
+            <div style={{ flex: 1, padding: '0.75rem 1rem' }}>
+                {loading ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem', color: '#9ca3af', fontSize: '0.875rem' }}>
+                        Chargement...
+                    </div>
+                ) : tasks.length === 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3.5rem 2rem', textAlign: 'center' }}>
+                        <div style={{
+                            width: '3.5rem', height: '3.5rem',
+                            background: '#f3f4f6', borderRadius: '1rem',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            marginBottom: '1rem',
+                        }}>
+                            <CheckSquare size={22} color="#d1d5db" />
+                        </div>
+                        <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.9375rem', fontWeight: 600, color: '#111827' }}>
+                            Aucune tâche
+                        </h4>
+                        <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                            Ajoutez une tâche pour suivre les actions à faire.
+                        </p>
                         <button
-                            type="submit"
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                            onClick={onAddClick}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.375rem',
+                                padding: '0.5rem 1rem',
+                                background: '#eef2ff', color: '#4f46e5',
+                                border: '1px solid #c7d2fe',
+                                borderRadius: '0.5rem', fontSize: '0.875rem',
+                                fontWeight: 500, cursor: 'pointer',
+                            }}
                         >
-                            OK
+                            <Plus size={14} /> Créer une tâche
                         </button>
                     </div>
-                </form>
-            )}
-
-            <div className="divide-y divide-gray-100">
-                {tasks.length === 0 ? (
-                    <div className="p-8 text-center text-gray-400 text-sm">
-                        Aucune tâche pour ce client.
-                    </div>
                 ) : (
-                    tasks.map(task => (
-                        <div key={task.id} className="p-3 hover:bg-gray-50 flex items-center justify-between group transition">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => toggleStatus(task)}
-                                    className={`transition-colors ${task.status === 'DONE' ? 'text-green-500' : 'text-gray-300 hover:text-blue-500'}`}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                        {tasks.map(task => {
+                            const isDone = task.status === 'DONE';
+                            const priority = PRIORITY_CONFIG[task.priority] ?? PRIORITY_CONFIG['MEDIUM'];
+                            const overdue = !isDone && isOverdue(task.dueDate);
+                            const isHovered = hoveredId === task.id;
+
+                            return (
+                                <div
+                                    key={task.id}
+                                    onMouseEnter={() => setHoveredId(task.id)}
+                                    onMouseLeave={() => setHoveredId(null)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                        padding: '0.75rem 0.875rem',
+                                        borderRadius: '0.625rem',
+                                        border: `1px solid ${isHovered ? '#e0e7ff' : '#f3f4f6'}`,
+                                        background: isDone ? '#fafafa' : (isHovered ? '#fafbff' : '#fff'),
+                                        transition: 'background 0.1s, border-color 0.1s',
+                                        cursor: 'default',
+                                    }}
                                 >
-                                    {task.status === 'DONE' ? <CheckCircle size={20} /> : <Circle size={20} />}
-                                </button>
-                                <div>
-                                    <div className={`text-sm font-medium ${task.status === 'DONE' ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
-                                        {task.title}
-                                    </div>
-                                    {task.dueDate && (
-                                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
-                                            <Calendar size={12} />
-                                            {new Date(task.dueDate).toLocaleDateString()}
+                                    {/* Checkbox */}
+                                    <button
+                                        onClick={() => toggleStatus(task)}
+                                        style={{
+                                            background: 'none', border: 'none', cursor: 'pointer',
+                                            padding: 0, flexShrink: 0,
+                                            color: isDone ? '#10b981' : '#d1d5db',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            transition: 'color 0.15s',
+                                        }}
+                                        onMouseEnter={e => { if (!isDone) e.currentTarget.style.color = '#4f46e5'; }}
+                                        onMouseLeave={e => { if (!isDone) e.currentTarget.style.color = '#d1d5db'; }}
+                                        title={isDone ? 'Marquer comme à faire' : 'Marquer comme terminée'}
+                                    >
+                                        {isDone
+                                            ? <CheckCircle size={20} />
+                                            : <Circle size={20} />
+                                        }
+                                    </button>
+
+                                    {/* Content */}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            <span style={{
+                                                fontSize: '0.9rem',
+                                                fontWeight: 500,
+                                                color: isDone ? '#9ca3af' : '#111827',
+                                                textDecoration: isDone ? 'line-through' : 'none',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                            }}>
+                                                {task.title}
+                                            </span>
+
+                                            {/* Priority badge */}
+                                            <span style={{
+                                                fontSize: '0.625rem',
+                                                fontWeight: 700,
+                                                padding: '0.125rem 0.4rem',
+                                                borderRadius: '9999px',
+                                                background: isDone ? '#f3f4f6' : priority.bg,
+                                                color: isDone ? '#9ca3af' : priority.color,
+                                                border: `1px solid ${isDone ? '#e5e7eb' : priority.border}`,
+                                                textTransform: 'uppercase' as const,
+                                                letterSpacing: '0.04em',
+                                                flexShrink: 0,
+                                            }}>
+                                                {priority.label}
+                                            </span>
                                         </div>
-                                    )}
+
+                                        {task.dueDate && (
+                                            <div style={{
+                                                display: 'flex', alignItems: 'center', gap: '0.3rem',
+                                                marginTop: '0.25rem',
+                                                fontSize: '0.75rem',
+                                                color: overdue ? '#ef4444' : '#9ca3af',
+                                                fontWeight: overdue ? 600 : 400,
+                                            }}>
+                                                <Calendar size={11} />
+                                                {new Date(task.dueDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                {overdue && <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#ef4444' }}>En retard</span>}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Delete */}
+                                    <button
+                                        onClick={() => handleDelete(task.id)}
+                                        style={{
+                                            background: 'none', border: 'none', cursor: 'pointer',
+                                            padding: '0.3rem', borderRadius: '0.375rem',
+                                            color: '#d1d5db',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            opacity: isHovered ? 1 : 0,
+                                            transition: 'opacity 0.15s, color 0.15s',
+                                            flexShrink: 0,
+                                        }}
+                                        onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                                        onMouseLeave={e => (e.currentTarget.style.color = '#d1d5db')}
+                                        title="Supprimer"
+                                    >
+                                        <Trash2 size={15} />
+                                    </button>
                                 </div>
-                            </div>
-                            <button
-                                onClick={() => handleDelete(task.id)}
-                                className="p-1.5 text-gray-400 hover:text-red-500 rounded opacity-0 group-hover:opacity-100 transition"
-                                title="Supprimer"
-                            >
-                                <Trash2 size={16} />
-                            </button>
-                        </div>
-                    ))
+                            );
+                        })}
+                    </div>
                 )}
             </div>
         </div>

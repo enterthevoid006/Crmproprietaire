@@ -12,6 +12,8 @@ import { DocumentModule } from './modules/document/document.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { validate } from './shared/infrastructure/env/env.validation';
 import { AuditModule } from './modules/audit/audit.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { SearchModule } from './modules/search/search.module';
 import { TenantMiddleware } from './shared/infrastructure/middleware/tenant.middleware';
 
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -40,6 +42,8 @@ import { APP_GUARD } from '@nestjs/core';
     DocumentModule,
     FinanceModule,
     AuditModule,
+    NotificationModule,
+    SearchModule,
   ],
   providers: [
     {

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
-import { ActorRepositoryPort } from '../../domain/ports/actor.repository.port';
+import { ActorRepositoryPort, UpdateActorFields } from '../../domain/ports/actor.repository.port';
 import { Actor } from '../../domain/entities/actor.entity';
 import { TenantContext } from '../../../../shared/infrastructure/context/tenant-context';
 import { ActorMapper } from './actor.mapper';
@@ -52,5 +52,29 @@ export class PrismaActorRepository implements ActorRepositoryPort {
         });
 
         return rawActors.map(ActorMapper.toDomain);
+    }
+
+    async update(id: string, fields: UpdateActorFields): Promise<Actor | null> {
+        const tenantId = TenantContext.getTenantIdOrThrow();
+
+        // updateMany with both id + tenantId guarantees cross-tenant protection at SQL level
+        const { count } = await this.prisma.actor.updateMany({
+            where: { id, tenantId },
+            data: {
+                ...(fields.firstName !== undefined && { firstName: fields.firstName }),
+                ...(fields.lastName !== undefined && { lastName: fields.lastName }),
+                ...(fields.companyName !== undefined && { companyName: fields.companyName }),
+                ...(fields.email !== undefined && { email: fields.email }),
+                ...(fields.phone !== undefined && { phone: fields.phone }),
+                ...(fields.address !== undefined && { address: fields.address }),
+                ...(fields.source !== undefined && { source: fields.source }),
+                ...(fields.tags !== undefined && { tags: fields.tags }),
+                updatedAt: new Date(),
+            },
+        });
+
+        if (count === 0) return null;
+
+        return this.findById(id);
     }
 }

@@ -2,6 +2,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import type { JSX } from 'react';
 import { AuthProvider, useAuth } from './lib/auth.context';
 import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { RegisterConfirmPage } from './pages/RegisterConfirmPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
+import { AcceptInvitePage } from './pages/AcceptInvitePage';
+import { OnboardingPage } from './pages/OnboardingPage';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { ActorsListPage } from './modules/actors/pages/ActorsListPage';
@@ -17,6 +22,7 @@ import InvoicesListPage from './modules/finance/pages/InvoicesListPage';
 import InvoiceEditorPage from './modules/finance/pages/InvoiceEditorPage';
 import QuotesListPage from './modules/finance/pages/QuotesListPage';
 import QuoteEditorPage from './modules/finance/pages/QuoteEditorPage';
+import SettingsPage from './pages/SettingsPage';
 
 // Simple Protected Route Wrapper
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -51,6 +57,15 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/register/confirm" element={<RegisterConfirmPage />} />
+          <Route path="/verify/:token" element={<VerifyEmailPage />} />
+          <Route path="/accept-invite/:token" element={<AcceptInvitePage />} />
+          <Route path="/onboarding" element={
+            <ProtectedRoute>
+              <OnboardingPage />
+            </ProtectedRoute>
+          } />
 
           <Route path="/" element={
             <ProtectedRoute>
@@ -72,6 +87,7 @@ function App() {
             <Route path="finance/quotes" element={<QuotesListPage />} />
             <Route path="finance/quotes/new" element={<QuoteEditorPage />} />
             <Route path="finance/quotes/:id" element={<QuoteEditorPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" />} />

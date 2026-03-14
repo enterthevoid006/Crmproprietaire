@@ -9,7 +9,8 @@ import {
     Query,
     Body,
     Req,
-    Param
+    Param,
+    BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../iam/infrastructure/authentication/jwt-auth.guard';
@@ -17,14 +18,41 @@ import { UploadDocumentUseCase } from './application/use-cases/upload-document.u
 import { GetDocumentsUseCase } from './application/use-cases/get-documents.use-case';
 import { DeleteDocumentUseCase } from './application/use-cases/delete-document.use-case';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { extname, basename } from 'path';
 
-// Helper for file naming
+const ALLOWED_MIME_TYPES = new Set([
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+]);
+
+const ALLOWED_EXTENSIONS = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx', '.xls', '.xlsx']);
+
+// Sanitise filename: strip path separators and keep only safe characters
+const sanitizeFilename = (raw: string): string => {
+    const base = basename(raw).replace(/[^a-zA-Z0-9._-]/g, '_');
+    return base.slice(0, 100); // cap length
+};
+
 const editFileName = (req, file, callback) => {
-    const name = file.originalname.split('.')[0];
-    const fileExtName = extname(file.originalname);
-    const randomName = Array(4).fill(null).map(() => Math.round(Math.random() * 16).toString(16)).join('');
-    callback(null, `${name}-${randomName}${fileExtName}`);
+    const ext = extname(file.originalname).toLowerCase();
+    const safeName = sanitizeFilename(file.originalname.slice(0, file.originalname.length - ext.length));
+    const randomName = Array(8).fill(null).map(() => Math.round(Math.random() * 16).toString(16)).join('');
+    callback(null, `${safeName}-${randomName}${ext}`);
+};
+
+const fileFilter = (req, file, callback) => {
+    const ext = extname(file.originalname).toLowerCase();
+    if (!ALLOWED_MIME_TYPES.has(file.mimetype) || !ALLOWED_EXTENSIONS.has(ext)) {
+        return callback(new BadRequestException(
+            'Type de fichier non autorisé. Formats acceptés : PDF, JPG, PNG, DOC, DOCX, XLS, XLSX.'
+        ), false);
+    }
+    callback(null, true);
 };
 
 @Controller('documents')
@@ -42,6 +70,8 @@ export class DocumentController {
             destination: './uploads',
             filename: editFileName,
         }),
+        fileFilter,
+        limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB max
     }))
     async uploadFile(
         @UploadedFile() file: Express.Multer.File,
@@ -68,7 +98,7 @@ export class DocumentController {
     }
 
     @Delete(':id')
-    async delete(@Param('id') id: string) {
-        return this.deleteDocumentUseCase.execute(id);
+    async delete(@Param('id') id: string, @Req() req: any) {
+        return this.deleteDocumentUseCase.execute(id, req.user.tenantId);
     }
 }

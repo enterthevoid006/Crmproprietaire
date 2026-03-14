@@ -4,3 +4,4 @@ docker-data/
 .env
 dist/
 coverage/
+backend/uploads/

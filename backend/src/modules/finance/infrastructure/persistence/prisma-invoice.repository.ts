@@ -45,8 +45,9 @@ export class PrismaInvoiceRepository implements InvoiceRepositoryPort {
     }
 
     async updateStatus(id: string, status: string): Promise<void> {
-        await this.prisma.invoice.update({
-            where: { id },
+        const tenantId = TenantContext.getTenantIdOrThrow();
+        await this.prisma.invoice.updateMany({
+            where: { id, tenantId },
             data: { status: status as any }, // Cast to Prisma Enum
         });
     }

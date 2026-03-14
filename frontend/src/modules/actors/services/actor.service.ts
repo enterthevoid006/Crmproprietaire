@@ -53,5 +53,10 @@ export const ActorService = {
     getById: async (id: string): Promise<Actor> => {
         const response = await api.get<Actor>(`/actors/${id}`);
         return response.data;
-    }
+    },
+
+    update: async (id: string, data: Partial<CreateActorDTO>): Promise<Actor> => {
+        const response = await api.patch<Actor>(`/actors/${id}`, data);
+        return response.data;
+    },
 };

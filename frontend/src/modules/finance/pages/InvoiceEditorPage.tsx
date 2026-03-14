@@ -1,31 +1,77 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Trash2, Plus, Send, CheckCircle, AlertTriangle, Lock, Download } from 'lucide-react';
+import {
+    ArrowLeft, Save, Plus, Send, CheckCircle, Lock,
+    Download, Trash2,
+} from 'lucide-react';
 import { InvoiceService, type InvoiceItem, InvoiceStatus, type Invoice } from '../services/invoice.service';
 import { ActorService, type Actor } from '../../actors/services/actor.service';
+import { TenantService, type TenantProfile } from '../../../lib/tenant.service';
 
+// ── Status config ─────────────────────────────────────────────────────────────
+const STATUS_CONFIG: Record<InvoiceStatus, { label: string; color: string; bg: string; border: string }> = {
+    DRAFT:     { label: 'Brouillon', color: '#374151', bg: '#f3f4f6', border: '#d1d5db' },
+    SENT:      { label: 'Envoyée',   color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+    PAID:      { label: 'Payée',     color: '#065f46', bg: '#ecfdf5', border: '#6ee7b7' },
+    OVERDUE:   { label: 'En retard', color: '#991b1b', bg: '#fef2f2', border: '#fca5a5' },
+    CANCELLED: { label: 'Annulée',   color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
+};
+
+// ── Main component ─────────────────────────────────────────────────────────────
 const InvoiceEditorPage = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const isEditMode = !!id;
 
+    // Invoice state
     const [loading, setLoading] = useState(false);
     const [invoice, setInvoice] = useState<Invoice | null>(null);
     const [actors, setActors] = useState<Actor[]>([]);
-
-    // Form State
     const [actorId, setActorId] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [items, setItems] = useState<InvoiceItem[]>([
-        { description: 'Service...', quantity: 1, unitPrice: 0, total: 0 }
+        { description: '', quantity: 1, unitPrice: 0, total: 0 },
     ]);
+
+    // Tenant profile — read-only in this page
+    const [tenantProfile, setTenantProfile] = useState<TenantProfile | null>(null);
+    const [profileIncomplete, setProfileIncomplete] = useState(false);
+
+    // Destinataire — editable per-document copy, does NOT persist to actor record
+    const [recipientName, setRecipientName] = useState('');
+    const [recipientAddress, setRecipientAddress] = useState('');
+    const [recipientEmail, setRecipientEmail] = useState('');
+    const [recipientPhone, setRecipientPhone] = useState('');
 
     useEffect(() => {
         ActorService.getAll().then(setActors).catch(console.error);
-        if (isEditMode) {
-            loadInvoice();
-        }
+        TenantService.getProfile().then(p => {
+            setTenantProfile(p);
+            setProfileIncomplete(!p.name || !p.siret || !p.address);
+        }).catch(console.error);
+        if (isEditMode) loadInvoice();
     }, [id]);
+
+    // When actorId changes, pre-fill destinataire fields from the actor list.
+    // These fields are editable inline on the document without touching the DB.
+    useEffect(() => {
+        const actor = actors.find(a => a.id === actorId);
+        if (actor) {
+            setRecipientName(
+                actor.type === 'CORPORATE'
+                    ? (actor.companyName ?? '')
+                    : `${actor.firstName ?? ''} ${actor.lastName ?? ''}`.trim()
+            );
+            setRecipientAddress(actor.address ?? '');
+            setRecipientEmail(actor.email ?? '');
+            setRecipientPhone(actor.phone ?? '');
+        } else {
+            setRecipientName('');
+            setRecipientAddress('');
+            setRecipientEmail('');
+            setRecipientPhone('');
+        }
+    }, [actorId, actors]);
 
     const loadInvoice = async () => {
         try {
@@ -36,296 +82,590 @@ const InvoiceEditorPage = () => {
             setItems(data.items);
         } catch (err) {
             console.error(err);
-            alert('Failed to load invoice');
             navigate('/finance/invoices');
         }
     };
 
-    // Computed
-    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+    // ── Invoice logic ─────────────────────────────────────────────────────────
+    const subtotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
     const tax = subtotal * 0.20;
     const total = subtotal + tax;
-
     const isReadOnly = isEditMode && invoice?.status !== InvoiceStatus.DRAFT;
 
     const handleItemChange = (index: number, field: keyof InvoiceItem, value: string | number) => {
         if (isReadOnly) return;
-        const newItems = [...items];
-        const item = { ...newItems[index], [field]: value };
+        const next = [...items];
+        const item = { ...next[index], [field]: value };
         if (field === 'quantity' || field === 'unitPrice') {
             item.total = Number(item.quantity) * Number(item.unitPrice);
         }
-        newItems[index] = item;
-        setItems(newItems);
-    };
-
-    const addItem = () => {
-        if (isReadOnly) return;
-        setItems([...items, { description: '', quantity: 1, unitPrice: 0, total: 0 }]);
-    };
-
-    const removeItem = (index: number) => {
-        if (isReadOnly) return;
-        setItems(items.filter((_, i) => i !== index));
+        next[index] = item;
+        setItems(next);
     };
 
     const handleSave = async () => {
-        if (!actorId) return alert('Please select a client');
+        if (!actorId) { alert('Veuillez sélectionner un client.'); return; }
         setLoading(true);
         try {
             await InvoiceService.create({
                 actorId,
                 items,
-                dueDate: dueDate ? new Date(dueDate).toISOString() : undefined
+                dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
             });
             navigate('/finance/invoices');
         } catch (err: any) {
-            console.error(err);
             const msg = err?.response?.data?.message || err?.message || 'Erreur inconnue';
-            alert(`Erreur lors de l'enregistrement : ${msg}`);
+            alert(`Erreur : ${msg}`);
         } finally {
             setLoading(false);
         }
     };
 
     const handleStatusChange = async (newStatus: InvoiceStatus) => {
-        if (!invoice) return;
-        if (!confirm(`Are you sure you want to mark this invoice as ${newStatus}?`)) return;
-
+        if (!invoice || !confirm(`Confirmer le passage au statut "${STATUS_CONFIG[newStatus].label}" ?`)) return;
         try {
             await InvoiceService.updateStatus(invoice.id, newStatus);
-            await loadInvoice(); // Refresh
-        } catch (e) {
-            alert('Failed to update status');
-        }
+            await loadInvoice();
+        } catch { alert('Erreur lors de la mise à jour du statut.'); }
     };
 
-    const getStatusBadge = (status: InvoiceStatus) => {
-        const styles = {
-            [InvoiceStatus.DRAFT]: 'bg-gray-100 text-gray-800',
-            [InvoiceStatus.SENT]: 'bg-blue-100 text-blue-800',
-            [InvoiceStatus.PAID]: 'bg-green-100 text-green-800',
-            [InvoiceStatus.OVERDUE]: 'bg-red-100 text-red-800',
-            [InvoiceStatus.CANCELLED]: 'bg-gray-100 text-gray-500 line-through',
-        };
-        return (
-            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${styles[status]}`}>
-                {status}
-            </span>
-        );
-    };
+    // ── Styles ────────────────────────────────────────────────────────────────
+    const btn = (bg: string, hoverBg: string, extra?: React.CSSProperties): React.CSSProperties => ({
+        display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
+        padding: '0.5rem 1rem', border: 'none', borderRadius: '0.5rem',
+        fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+        background: bg, color: '#fff',
+        transition: 'background 0.15s',
+        ...extra,
+    });
+
+    const statusCfg = invoice ? STATUS_CONFIG[invoice.status] : null;
 
     return (
-        <div className="max-w-5xl mx-auto p-8">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-4">
+        <div style={{ padding: '1.5rem 2rem', background: '#f8fafc', minHeight: '100vh' }}>
+
+            {/* ── Incomplete profile banner ── */}
+            {profileIncomplete && !isReadOnly && (
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '10px 16px', marginBottom: '1rem',
+                    background: '#fffbeb', border: '1px solid #fcd34d',
+                    borderLeft: '4px solid #f59e0b', borderRadius: '0 8px 8px 0',
+                    gap: '12px',
+                }}>
+                    <span style={{ fontSize: '0.875rem', color: '#92400e' }}>
+                        ⚠️ Complétez votre profil agence pour pré-remplir vos documents automatiquement.
+                    </span>
+                    <button
+                        onClick={() => navigate('/settings')}
+                        style={{
+                            flexShrink: 0, padding: '4px 12px',
+                            background: '#f59e0b', color: '#fff',
+                            border: 'none', borderRadius: '6px',
+                            fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                        }}
+                    >
+                        → Paramètres
+                    </button>
+                </div>
+            )}
+
+            {/* ── Top bar ── */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <button
                         onClick={() => navigate(-1)}
-                        className="flex items-center text-gray-500 hover:text-gray-900 transition-colors font-medium"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', background: 'none', border: 'none', color: '#6b7280', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', padding: 0 }}
                     >
-                        <ArrowLeft size={20} className="mr-2" />
-                        Retour
+                        <ArrowLeft size={16} /> Retour
                     </button>
-                    {isEditMode && invoice && getStatusBadge(invoice.status)}
+                    {statusCfg && (
+                        <span style={{
+                            padding: '0.25rem 0.75rem', borderRadius: '9999px',
+                            fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' as const,
+                            background: statusCfg.bg, color: statusCfg.color, border: `1px solid ${statusCfg.border}`,
+                        }}>
+                            {statusCfg.label}
+                        </span>
+                    )}
                 </div>
 
-                <div className="flex items-center gap-3">
-                    {/* Status Actions */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     {isEditMode && invoice?.status === InvoiceStatus.DRAFT && (
-                        <button
-                            onClick={() => handleStatusChange(InvoiceStatus.SENT)}
-                            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
-                        >
-                            <Send size={18} />
-                            <span>Mark as Sent</span>
+                        <button style={btn('#2563eb', '#1d4ed8')} onClick={() => handleStatusChange(InvoiceStatus.SENT)}
+                            onMouseEnter={e => (e.currentTarget.style.background = '#1d4ed8')}
+                            onMouseLeave={e => (e.currentTarget.style.background = '#2563eb')}>
+                            <Send size={15} /> Marquer envoyée
                         </button>
                     )}
                     {isEditMode && (invoice?.status === InvoiceStatus.SENT || invoice?.status === InvoiceStatus.OVERDUE) && (
-                        <button
-                            onClick={() => handleStatusChange(InvoiceStatus.PAID)}
-                            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium"
-                        >
-                            <CheckCircle size={18} />
-                            <span>Mark as Paid</span>
+                        <button style={btn('#059669', '#047857')} onClick={() => handleStatusChange(InvoiceStatus.PAID)}
+                            onMouseEnter={e => (e.currentTarget.style.background = '#047857')}
+                            onMouseLeave={e => (e.currentTarget.style.background = '#059669')}>
+                            <CheckCircle size={15} /> Marquer payée
                         </button>
                     )}
-
                     {isEditMode && invoice && (
-                        <button
+                        <button style={btn('#374151', '#1f2937', { background: '#f3f4f6', color: '#374151' })}
                             onClick={() => InvoiceService.downloadPdf(invoice.id)}
-                            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
-                        >
-                            <Download size={18} />
-                            <span>PDF</span>
+                            onMouseEnter={e => (e.currentTarget.style.background = '#e5e7eb')}
+                            onMouseLeave={e => (e.currentTarget.style.background = '#f3f4f6')}>
+                            <Download size={15} /> PDF
                         </button>
                     )}
-
                     {!isReadOnly && (
                         <button
                             onClick={handleSave}
                             disabled={loading}
-                            className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                            style={btn(loading ? '#a5b4fc' : '#4f46e5', '#4338ca', {
+                                background: loading ? '#a5b4fc' : '#4f46e5',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                boxShadow: '0 2px 6px rgba(79,70,229,0.3)',
+                            })}
+                            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#4338ca'; }}
+                            onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#4f46e5'; }}
                         >
-                            <Save size={20} />
-                            <span>{loading ? 'Enregistrement...' : 'Enregistrer'}</span>
+                            <Save size={15} />
+                            {loading ? 'Enregistrement...' : 'Enregistrer'}
                         </button>
                     )}
                 </div>
             </div>
 
-            {/* ReadOnly Warning */}
+            {/* ── Locked warning ── */}
             {isReadOnly && (
-                <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-8 rounded-r-lg flex items-center gap-3">
-                    <Lock className="text-amber-500" size={24} />
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                    padding: '0.875rem 1.25rem', marginBottom: '1.25rem',
+                    background: '#fffbeb', border: '1px solid #fde68a',
+                    borderLeft: '4px solid #f59e0b', borderRadius: '0.5rem',
+                }}>
+                    <Lock size={18} color="#d97706" />
                     <div>
-                        <p className="font-bold text-amber-900">Facture verrouillée</p>
-                        <p className="text-amber-700 text-sm">Ce document ne peut plus être modifié car il a été envoyé ou payé.</p>
+                        <p style={{ margin: 0, fontWeight: 700, color: '#92400e', fontSize: '0.9rem' }}>Facture verrouillée</p>
+                        <p style={{ margin: 0, fontSize: '0.8125rem', color: '#b45309' }}>Ce document ne peut plus être modifié.</p>
                     </div>
                 </div>
             )}
 
-            {/* Document Paper UI */}
-            <div className={`bg-white rounded-xl shadow-lg border border-gray-200 p-10 space-y-10 min-h-[800px] relative ${isReadOnly ? 'opacity-90 grayscale-[0.1]' : ''}`}>
+            {/* ── Document card ── */}
+            <div style={{
+                background: '#fff',
+                borderRadius: '0.75rem',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 4px 24px rgba(0,0,0,0.04)',
+                border: '1px solid #e5e7eb',
+                overflow: 'hidden',
+            }}>
 
-                {/* Brand / Header */}
-                <div className="flex justify-between items-start border-b border-gray-100 pb-8">
-                    <div>
-                        <div className="h-12 w-40 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-sm font-medium mb-4">
-                            LOGO
-                        </div>
-                        <h2 className="text-xl font-bold text-gray-900">
-                            {isEditMode && invoice ? `Facture ${invoice.number}` : 'Nouvelle Facture'}
-                        </h2>
-                    </div>
-                    <div className="text-right space-y-2">
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Date d'échéance</label>
-                            <input
-                                type="date"
-                                disabled={isReadOnly}
-                                value={dueDate}
-                                onChange={(e) => setDueDate(e.target.value)}
-                                className="text-right p-2 border border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm disabled:bg-gray-50 disabled:text-gray-500"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Client Section */}
-                <div className="grid grid-cols-2 gap-12">
-                    <div>
-                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Vendeur</h3>
-                        <p className="font-bold text-gray-900">Agence Demo</p>
-                        <p className="text-gray-500 text-sm mt-1">123 Rue de la Paix<br />75000 Paris, France</p>
-                    </div>
-                    <div>
-                        <h3 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Client</h3>
-                        <select
-                            disabled={isReadOnly}
-                            value={actorId}
-                            onChange={(e) => setActorId(e.target.value)}
-                            style={{ width: '100%', padding: '0.75rem', backgroundColor: isReadOnly ? '#f9fafb' : '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.5rem', outline: 'none', fontSize: '0.875rem', fontWeight: 500, color: actorId ? '#111827' : '#9ca3af', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
-                        >
-                            <option value="">-- Sélectionner un client --</option>
-                            {actors.map(a => (
-                                <option key={a.id} value={a.id}>
-                                    {a.type === 'CORPORATE' ? a.companyName : `${a.firstName ?? ''} ${a.lastName ?? ''}`.trim()} {a.email ? `(${a.email})` : ''}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-
-                {/* Line Items Table */}
-                <div className="mt-8">
-                    <div className="flex justify-between items-end mb-4">
-                        <h3 className="text-lg font-bold text-gray-900">Services & Produits</h3>
-                    </div>
-
-                    <div className="w-full">
-                        <div className="grid grid-cols-12 gap-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider px-4">
-                            <div className="col-span-6">Description</div>
-                            <div className="col-span-2 text-right">Qté</div>
-                            <div className="col-span-2 text-right">Prix Unit.</div>
-                            <div className="col-span-2 text-right">Total HT</div>
-                        </div>
-
-                        <div className="space-y-2">
-                            {items.map((item, index) => (
-                                <div key={index} className="grid grid-cols-12 gap-4 items-center group bg-gray-50 p-3 rounded-lg hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-200 transition-all">
-                                    <div className="col-span-6 flex items-center gap-2">
-                                        {!isReadOnly && (
-                                            <button onClick={() => removeItem(index)} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 p-1 transition-opacity">
-                                                <Trash2 size={16} />
-                                            </button>
-                                        )}
-                                        <input
-                                            type="text"
-                                            disabled={isReadOnly}
-                                            value={item.description}
-                                            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                                            placeholder="Description du service..."
-                                            className="w-full bg-transparent border-none p-0 focus:ring-0 text-gray-900 placeholder-gray-400 font-medium disabled:text-gray-600"
-                                        />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <input
-                                            type="number"
-                                            disabled={isReadOnly}
-                                            value={item.quantity}
-                                            onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
-                                            className="w-full bg-transparent border-none p-0 focus:ring-0 text-right text-gray-900 disabled:text-gray-600"
-                                            placeholder="0"
-                                        />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <input
-                                            type="number"
-                                            disabled={isReadOnly}
-                                            value={item.unitPrice}
-                                            onChange={(e) => handleItemChange(index, 'unitPrice', Number(e.target.value))}
-                                            className="w-full bg-transparent border-none p-0 focus:ring-0 text-right text-gray-900 disabled:text-gray-600"
-                                            placeholder="0.00"
-                                        />
-                                    </div>
-                                    <div className="col-span-2 text-right font-bold text-gray-900">
-                                        {item.total.toFixed(2)} €
-                                    </div>
+                {/* ── Brand header ── */}
+                <div style={{
+                    padding: '2rem 2.5rem',
+                    borderBottom: '2px solid #f3f4f6',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: '2rem',
+                    flexWrap: 'wrap',
+                }}>
+                    {/* Left: logo + agency info (read-only) */}
+                    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: '1 1 260px' }}>
+                        {/* Logo — read-only */}
+                        <div style={{
+                            width: '80px', height: '60px', flexShrink: 0,
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '0.5rem',
+                            overflow: 'hidden',
+                            background: '#f9fafb',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            {tenantProfile?.logoUrl ? (
+                                <img src={tenantProfile.logoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="Logo" />
+                            ) : (
+                                <div style={{ fontSize: '0.5625rem', color: '#d1d5db', fontWeight: 600, textAlign: 'center' }}>
+                                    LOGO
                                 </div>
-                            ))}
+                            )}
                         </div>
 
-                        {!isReadOnly && (
+                        {/* Agency info — static display */}
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ fontSize: '1.125rem', fontWeight: 700, color: '#111827' }}>
+                                {tenantProfile?.name || <span style={{ color: '#d1d5db', fontStyle: 'italic' }}>Nom agence</span>}
+                            </div>
+                            {tenantProfile?.address && (
+                                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>{tenantProfile.address}</div>
+                            )}
+                            {(tenantProfile?.postalCode || tenantProfile?.city) && (
+                                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                                    {[tenantProfile.postalCode, tenantProfile.city].filter(Boolean).join(' ')}
+                                </div>
+                            )}
                             <button
-                                onClick={addItem}
-                                className="mt-4 flex items-center space-x-2 text-indigo-600 hover:text-indigo-800 text-sm font-semibold px-4 py-2 hover:bg-indigo-50 rounded-lg transition-colors"
+                                onClick={() => navigate('/settings')}
+                                style={{ marginTop: '4px', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '0.72rem', color: '#4f46e5', textDecoration: 'underline', textAlign: 'left', fontFamily: 'inherit' }}
                             >
-                                <Plus size={16} />
-                                <span>Ajouter une ligne</span>
+                                Modifier dans les paramètres →
                             </button>
+                        </div>
+                    </div>
+
+                    {/* Right: invoice title + date */}
+                    <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
+                        <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.5rem', fontWeight: 800, color: '#4f46e5', letterSpacing: '-0.02em' }}>
+                            FACTURE
+                        </h2>
+                        {isEditMode && invoice && (
+                            <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
+                                N° {invoice.number}
+                            </p>
+                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                            <div>
+                                <label style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: '0.25rem' }}>
+                                    Date d'échéance
+                                </label>
+                                <input
+                                    type="date"
+                                    disabled={isReadOnly}
+                                    value={dueDate}
+                                    onChange={e => setDueDate(e.target.value)}
+                                    style={{
+                                        padding: '0.4rem 0.625rem',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '0.375rem',
+                                        fontSize: '0.875rem',
+                                        color: '#374151',
+                                        outline: 'none',
+                                        background: isReadOnly ? '#f9fafb' : '#fff',
+                                        cursor: isReadOnly ? 'not-allowed' : 'pointer',
+                                    }}
+                                    onFocus={e => { e.currentTarget.style.borderColor = '#4f46e5'; }}
+                                    onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Vendor / Client ── */}
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '2rem',
+                    padding: '1.75rem 2.5rem',
+                    borderBottom: '1px solid #f3f4f6',
+                }}>
+                    {/* Vendor — read-only, from tenantProfile */}
+                    <div>
+                        <p style={{ margin: '0 0 0.625rem 0', fontSize: '0.6875rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
+                            Émetteur
+                        </p>
+                        <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9375rem', color: '#111827' }}>
+                            {tenantProfile?.name || '—'}
+                        </p>
+                        {tenantProfile?.address && (
+                            <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: '#6b7280' }}>{tenantProfile.address}</p>
+                        )}
+                        {(tenantProfile?.postalCode || tenantProfile?.city) && (
+                            <p style={{ margin: '0.125rem 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                                {[tenantProfile.postalCode, tenantProfile.city].filter(Boolean).join(' ')}
+                            </p>
+                        )}
+                        {tenantProfile?.siret && (
+                            <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: '#9ca3af' }}>
+                                SIRET : {tenantProfile.siret}
+                            </p>
+                        )}
+                        {tenantProfile?.vatNumber && (
+                            <p style={{ margin: '0.125rem 0 0', fontSize: '0.8rem', color: '#9ca3af' }}>
+                                TVA : {tenantProfile.vatNumber}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Destinataire — independent state, editable per-document */}
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+                            <p style={{ margin: 0, fontSize: '0.6875rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
+                                Destinataire
+                            </p>
+                            {!isReadOnly && (
+                                <button
+                                    onClick={() => navigate('/actors')}
+                                    style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: '0.375rem', padding: '0.2rem 0.625rem', fontSize: '0.72rem', fontWeight: 600, color: '#4f46e5', cursor: 'pointer', fontFamily: 'inherit' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = '#eef2ff'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                                >
+                                    + Nouveau client
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Dropdown — only in edit mode */}
+                        {!isReadOnly && (
+                            <select
+                                value={actorId}
+                                onChange={e => setActorId(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.625rem 0.75rem',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: '0.5rem',
+                                    outline: 'none',
+                                    fontSize: '0.875rem',
+                                    fontWeight: actorId ? 600 : 400,
+                                    color: actorId ? '#111827' : '#9ca3af',
+                                    background: '#fff',
+                                    cursor: 'pointer',
+                                    marginBottom: actorId ? '0.75rem' : 0,
+                                }}
+                                onFocus={e => { e.currentTarget.style.borderColor = '#4f46e5'; }}
+                                onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                            >
+                                <option value="">— Sélectionner un destinataire —</option>
+                                {actors.map(a => (
+                                    <option key={a.id} value={a.id}>
+                                        {a.type === 'CORPORATE' ? a.companyName : `${a.firstName ?? ''} ${a.lastName ?? ''}`.trim()}
+                                        {a.email ? ` (${a.email})` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+
+                        {/* Recipient fields — editable inline, do NOT persist to actor record */}
+                        {(actorId || isReadOnly) && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <input
+                                    disabled={isReadOnly}
+                                    value={recipientName}
+                                    onChange={e => setRecipientName(e.target.value)}
+                                    placeholder="Nom du destinataire"
+                                    style={{
+                                        background: 'transparent', border: '1px solid transparent', borderRadius: '0.25rem',
+                                        outline: 'none', padding: '0.2rem 0.25rem', margin: '-0.2rem -0.25rem',
+                                        fontFamily: 'inherit', fontSize: '0.9375rem', fontWeight: 700, color: '#111827',
+                                        width: '100%', boxSizing: 'border-box' as const,
+                                    }}
+                                    onFocus={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#4f46e5'; }}
+                                    onBlur={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+                                />
+                                <input
+                                    disabled={isReadOnly}
+                                    value={recipientAddress}
+                                    onChange={e => setRecipientAddress(e.target.value)}
+                                    placeholder="Adresse"
+                                    style={{
+                                        background: 'transparent', border: '1px solid transparent', borderRadius: '0.25rem',
+                                        outline: 'none', padding: '0.2rem 0.25rem', margin: '-0.2rem -0.25rem',
+                                        fontFamily: 'inherit', fontSize: '0.875rem', color: '#6b7280',
+                                        width: '100%', boxSizing: 'border-box' as const,
+                                    }}
+                                    onFocus={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#4f46e5'; }}
+                                    onBlur={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+                                />
+                                <input
+                                    disabled={isReadOnly}
+                                    value={recipientEmail}
+                                    onChange={e => setRecipientEmail(e.target.value)}
+                                    placeholder="Email"
+                                    style={{
+                                        background: 'transparent', border: '1px solid transparent', borderRadius: '0.25rem',
+                                        outline: 'none', padding: '0.2rem 0.25rem', margin: '-0.2rem -0.25rem',
+                                        fontFamily: 'inherit', fontSize: '0.875rem', color: '#6b7280',
+                                        width: '100%', boxSizing: 'border-box' as const,
+                                    }}
+                                    onFocus={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#4f46e5'; }}
+                                    onBlur={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+                                />
+                                <input
+                                    disabled={isReadOnly}
+                                    value={recipientPhone}
+                                    onChange={e => setRecipientPhone(e.target.value)}
+                                    placeholder="Téléphone"
+                                    style={{
+                                        background: 'transparent', border: '1px solid transparent', borderRadius: '0.25rem',
+                                        outline: 'none', padding: '0.2rem 0.25rem', margin: '-0.2rem -0.25rem',
+                                        fontFamily: 'inherit', fontSize: '0.875rem', color: '#6b7280',
+                                        width: '100%', boxSizing: 'border-box' as const,
+                                    }}
+                                    onFocus={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#4f46e5'; }}
+                                    onBlur={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+                                />
+                            </div>
                         )}
                     </div>
                 </div>
 
-                {/* Totals Section */}
-                <div className="border-t border-gray-100 pt-8 mt-12 flex justify-end">
-                    <div className="w-80 space-y-4">
-                        <div className="flex justify-between text-gray-600 text-sm">
+                {/* ── Line items ── */}
+                <div style={{ padding: '1.75rem 2.5rem' }}>
+                    <p style={{ margin: '0 0 1rem 0', fontSize: '0.9375rem', fontWeight: 700, color: '#111827' }}>
+                        Prestations & Produits
+                    </p>
+
+                    {/* Table header */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 72px 110px 110px 36px',
+                        gap: '0.5rem',
+                        padding: '0.5rem 0.75rem',
+                        borderBottom: '2px solid #f3f4f6',
+                        marginBottom: '0.375rem',
+                    }}>
+                        {['Description', 'Qté', 'Prix unitaire', 'Total HT', ''].map((h, i) => (
+                            <div key={i} style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.06em', textAlign: i > 0 ? 'right' : 'left' as const }}>
+                                {h}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Rows */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {items.map((item, index) => (
+                            <ItemRow
+                                key={index}
+                                item={item}
+                                isReadOnly={isReadOnly}
+                                onChange={(field, value) => handleItemChange(index, field, value)}
+                                onRemove={() => setItems(items.filter((_, i) => i !== index))}
+                            />
+                        ))}
+                    </div>
+
+                    {!isReadOnly && (
+                        <button
+                            onClick={() => setItems([...items, { description: '', quantity: 1, unitPrice: 0, total: 0 }])}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.375rem',
+                                marginTop: '0.75rem', padding: '0.5rem 0.75rem',
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                color: '#4f46e5', fontSize: '0.875rem', fontWeight: 600,
+                                borderRadius: '0.375rem',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.background = '#eef2ff')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                        >
+                            <Plus size={15} /> Ajouter une ligne
+                        </button>
+                    )}
+                </div>
+
+                {/* ── Totals ── */}
+                <div style={{
+                    padding: '1.5rem 2.5rem 2rem',
+                    borderTop: '2px solid #f3f4f6',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                }}>
+                    <div style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#6b7280' }}>
                             <span>Sous-total HT</span>
-                            <span className="font-medium">{subtotal.toFixed(2)} €</span>
+                            <span style={{ fontWeight: 500 }}>{subtotal.toFixed(2)} €</span>
                         </div>
-                        <div className="flex justify-between text-gray-600 text-sm">
-                            <span>TVA (20%)</span>
-                            <span className="font-medium">{tax.toFixed(2)} €</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#6b7280' }}>
+                            <span>TVA (20 %)</span>
+                            <span style={{ fontWeight: 500 }}>{tax.toFixed(2)} €</span>
                         </div>
-                        <div className="flex justify-between text-2xl font-bold text-gray-900 pt-4 border-t border-gray-200">
+                        <div style={{
+                            display: 'flex', justifyContent: 'space-between',
+                            paddingTop: '0.75rem',
+                            borderTop: '2px solid #e5e7eb',
+                            fontSize: '1.125rem', fontWeight: 800, color: '#111827',
+                        }}>
                             <span>Total TTC</span>
-                            <span className="text-indigo-600">{total.toFixed(2)} €</span>
+                            <span style={{ color: '#4f46e5' }}>{total.toFixed(2)} €</span>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    );
+};
 
+// ── Item row ──────────────────────────────────────────────────────────────────
+interface ItemRowProps {
+    item: InvoiceItem;
+    isReadOnly: boolean;
+    onChange: (field: keyof InvoiceItem, value: string | number) => void;
+    onRemove: () => void;
+}
+
+const ItemRow = ({ item, isReadOnly, onChange, onRemove }: ItemRowProps) => {
+    const [hovered, setHovered] = useState(false);
+
+    const cellInput = (extra?: React.CSSProperties): React.CSSProperties => ({
+        width: '100%',
+        background: 'transparent',
+        border: 'none',
+        outline: 'none',
+        fontFamily: 'inherit',
+        fontSize: '0.9rem',
+        color: '#111827',
+        padding: '0.375rem 0',
+        ...extra,
+    });
+
+    return (
+        <div
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 72px 110px 110px 36px',
+                gap: '0.5rem',
+                alignItems: 'center',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '0.5rem',
+                background: hovered && !isReadOnly ? '#fafbff' : 'transparent',
+                border: `1px solid ${hovered && !isReadOnly ? '#e0e7ff' : 'transparent'}`,
+                transition: 'background 0.1s, border-color 0.1s',
+            }}
+        >
+            <input
+                type="text"
+                disabled={isReadOnly}
+                value={item.description}
+                onChange={e => onChange('description', e.target.value)}
+                placeholder="Description du service..."
+                style={cellInput({ fontWeight: 500 })}
+            />
+            <input
+                type="number"
+                disabled={isReadOnly}
+                value={item.quantity}
+                min={0}
+                onChange={e => onChange('quantity', Number(e.target.value))}
+                style={cellInput({ textAlign: 'right' })}
+            />
+            <input
+                type="number"
+                disabled={isReadOnly}
+                value={item.unitPrice}
+                min={0}
+                step={0.01}
+                onChange={e => onChange('unitPrice', Number(e.target.value))}
+                style={cellInput({ textAlign: 'right' })}
+            />
+            <div style={{ textAlign: 'right', fontSize: '0.9rem', fontWeight: 700, color: '#111827', paddingRight: '0.25rem' }}>
+                {(item.quantity * item.unitPrice).toFixed(2)} €
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                {!isReadOnly && (
+                    <button
+                        onClick={onRemove}
+                        style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            padding: '0.25rem', borderRadius: '0.25rem',
+                            color: '#d1d5db',
+                            opacity: hovered ? 1 : 0,
+                            transition: 'opacity 0.15s, color 0.15s',
+                            display: 'flex', alignItems: 'center',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                        onMouseLeave={e => (e.currentTarget.style.color = '#d1d5db')}
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                )}
             </div>
         </div>
     );

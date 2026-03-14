@@ -2,11 +2,13 @@ import { Entity } from '../../../core/domain/entity';
 
 export interface UserProps {
     email: string;
-    role: string; // Stored as string or enum in domain, mapped from DB
+    role: string;
     firstName: string | null;
     lastName: string | null;
     tenantId: string;
-    passwordHash: string; // We only deal with hashed passwords in domain
+    passwordHash: string;
+    emailVerified: boolean;
+    emailVerificationToken: string | null;
     createdAt: Date;
     updatedAt: Date;
 }

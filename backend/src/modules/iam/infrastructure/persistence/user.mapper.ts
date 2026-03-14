@@ -6,11 +6,13 @@ export class UserMapper {
         return User.create(
             {
                 email: raw.email,
-                role: raw.role, // Map from DB
+                role: raw.role,
                 passwordHash: raw.password,
                 firstName: raw.firstName,
                 lastName: raw.lastName,
                 tenantId: raw.tenantId,
+                emailVerified: raw.emailVerified,
+                emailVerificationToken: raw.emailVerificationToken,
                 createdAt: raw.createdAt,
                 updatedAt: raw.updatedAt,
             },
@@ -18,15 +20,18 @@ export class UserMapper {
         );
     }
 
-    static toPersistence(user: User): Omit<PrismaUser, 'id' | 'createdAt' | 'updatedAt'> & { id: string } {
+    static toPersistence(user: User): Omit<PrismaUser, 'createdAt' | 'updatedAt'> {
+        const props = (user as any).props;
         return {
             id: user.id,
             email: user.email,
-            password: (user as any).props.passwordHash, // Accessing protected props via cast or add getter
-            role: (user as any).props.role,
-            firstName: (user as any).props.firstName,
-            lastName: (user as any).props.lastName,
+            password: props.passwordHash,
+            role: props.role,
+            firstName: props.firstName,
+            lastName: props.lastName,
             tenantId: user.tenantId,
+            emailVerified: props.emailVerified,
+            emailVerificationToken: props.emailVerificationToken,
         };
     }
 }

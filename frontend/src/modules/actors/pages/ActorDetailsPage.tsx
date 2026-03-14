@@ -6,10 +6,12 @@ import { DocumentList } from '../../documents/components/DocumentList';
 import { ClientTaskList } from '../../tasks/components/ClientTaskList';
 import { CreateTaskModal } from '../../tasks/components/CreateTaskModal';
 import { CreateNoteModal } from '../components/CreateNoteModal';
+import { ActorQuoteTab } from '../components/ActorQuoteTab';
+import { ActorInvoiceTab } from '../components/ActorInvoiceTab';
 import {
     ArrowLeft, Mail, Phone, MapPin, Globe, FolderOpen,
     CheckSquare, Plus, FileText, TrendingUp, Activity,
-    Building2, User, MoreHorizontal,
+    Building2, User, Edit2, X, Check, Euro,
 } from 'lucide-react';
 
 const AVATAR_COLORS = [
@@ -28,10 +30,26 @@ export const ActorDetailsPage = () => {
     const navigate = useNavigate();
     const [actor, setActor] = useState<Actor | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'timeline' | 'documents' | 'deals' | 'tasks'>('timeline');
+    const [activeTab, setActiveTab] = useState<'timeline' | 'documents' | 'deals' | 'tasks' | 'quotes' | 'invoices'>('timeline');
     const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
     const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+
+    // Edit mode
+    const [isEditing, setIsEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [successMsg, setSuccessMsg] = useState('');
+    const [editForm, setEditForm] = useState({
+        firstName: '',
+        lastName: '',
+        companyName: '',
+        email: '',
+        phone: '',
+        address: '',
+        source: '',
+        tagsInput: '',
+        inactive: false,
+    });
 
     useEffect(() => {
         if (id) {
@@ -43,6 +61,59 @@ export const ActorDetailsPage = () => {
     }, [id]);
 
     const handleRefresh = () => setRefreshKey(prev => prev + 1);
+
+    const startEdit = () => {
+        if (!actor) return;
+        const tags = actor.tags ?? [];
+        setEditForm({
+            firstName: actor.firstName ?? '',
+            lastName: actor.lastName ?? '',
+            companyName: actor.companyName ?? '',
+            email: actor.email ?? '',
+            phone: actor.phone ?? '',
+            address: actor.address ?? '',
+            source: actor.source ?? '',
+            tagsInput: tags.filter(t => t.toLowerCase() !== 'inactif').join(', '),
+            inactive: tags.some(t => t.toLowerCase() === 'inactif'),
+        });
+        setIsEditing(true);
+    };
+
+    const cancelEdit = () => setIsEditing(false);
+
+    const handleSave = async () => {
+        if (!actor || !id) return;
+        setSaving(true);
+        try {
+            const baseTags = editForm.tagsInput
+                .split(',')
+                .map(t => t.trim())
+                .filter(Boolean);
+            const tags = editForm.inactive ? [...baseTags, 'inactif'] : baseTags;
+
+            const updated = await ActorService.update(id, {
+                firstName: editForm.firstName || undefined,
+                lastName: editForm.lastName || undefined,
+                companyName: editForm.companyName || undefined,
+                email: editForm.email || undefined,
+                phone: editForm.phone || undefined,
+                address: editForm.address || undefined,
+                source: editForm.source || undefined,
+                tags,
+            });
+            setActor(updated);
+            setIsEditing(false);
+            setSuccessMsg('Modifications enregistrées');
+            setTimeout(() => setSuccessMsg(''), 3000);
+        } catch (err) {
+            console.error('Failed to update actor', err);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const setField = (key: keyof typeof editForm, value: string | boolean) =>
+        setEditForm(prev => ({ ...prev, [key]: value }));
 
     if (loading) return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '16rem' }}>
@@ -67,9 +138,17 @@ export const ActorDetailsPage = () => {
         : actor.companyName?.[0] || '';
     const avatarColor = getAvatarColor(displayName);
     const isProspect = actor.tags?.some(t => t.toLowerCase() === 'prospect');
+    const isInactive = actor.tags?.some(t => t.toLowerCase() === 'inactif');
 
     return (
         <div style={{ padding: '1.5rem', background: '#f8fafc', minHeight: '100vh' }}>
+
+            {/* Success toast */}
+            {successMsg && (
+                <div style={{ position: 'fixed', top: '1.25rem', right: '1.25rem', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1rem', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '0.625rem', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '0.875rem', fontWeight: 500, color: '#065f46' }}>
+                    <Check size={15} color="#059669" /> {successMsg}
+                </div>
+            )}
 
             {/* Top Bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
@@ -77,15 +156,31 @@ export const ActorDetailsPage = () => {
                     <ArrowLeft size={15} /> Retour à la liste
                 </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }} onClick={() => setIsTaskModalOpen(true)}>
-                        <CheckSquare size={14} /> Tâche
-                    </button>
-                    <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }} onClick={() => setIsNoteModalOpen(true)}>
-                        <FileText size={14} /> Note
-                    </button>
-                    <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#4f46e5', border: '1px solid #4f46e5', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#fff', cursor: 'pointer' }} onClick={() => navigate('/opportunities/new')}>
-                        <Plus size={14} /> Opportunité
-                    </button>
+                    {isEditing ? (
+                        <>
+                            <button onClick={cancelEdit} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#6b7280', cursor: 'pointer' }}>
+                                <X size={14} /> Annuler
+                            </button>
+                            <button onClick={handleSave} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#4f46e5', border: '1px solid #4f46e5', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                                <Check size={14} /> {saving ? 'Enregistrement…' : 'Enregistrer'}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button onClick={startEdit} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
+                                <Edit2 size={14} /> Modifier
+                            </button>
+                            <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }} onClick={() => setIsTaskModalOpen(true)}>
+                                <CheckSquare size={14} /> Tâche
+                            </button>
+                            <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }} onClick={() => setIsNoteModalOpen(true)}>
+                                <FileText size={14} /> Note
+                            </button>
+                            <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#4f46e5', border: '1px solid #4f46e5', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#fff', cursor: 'pointer' }} onClick={() => navigate('/opportunities/new')}>
+                                <Plus size={14} /> Opportunité
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -120,12 +215,9 @@ export const ActorDetailsPage = () => {
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
-                                    <span style={{ padding: '0.125rem 0.5rem', fontSize: '0.625rem', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em', borderRadius: '0.375rem', background: isProspect ? '#fffbeb' : '#ecfdf5', color: isProspect ? '#d97706' : '#059669', border: `1px solid ${isProspect ? '#fde68a' : '#a7f3d0'}` }}>
-                                        {isProspect ? 'Prospect' : 'Actif'}
+                                    <span style={{ padding: '0.125rem 0.5rem', fontSize: '0.625rem', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em', borderRadius: '0.375rem', background: isInactive ? '#f3f4f6' : isProspect ? '#fffbeb' : '#ecfdf5', color: isInactive ? '#6b7280' : isProspect ? '#d97706' : '#059669', border: `1px solid ${isInactive ? '#e5e7eb' : isProspect ? '#fde68a' : '#a7f3d0'}` }}>
+                                        {isInactive ? 'Inactif' : isProspect ? 'Prospect' : 'Actif'}
                                     </span>
-                                    <button style={{ padding: '0.25rem', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', borderRadius: '0.375rem' }}>
-                                        <MoreHorizontal size={15} />
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -133,22 +225,54 @@ export const ActorDetailsPage = () => {
                         {/* Contact */}
                         <div style={{ padding: '1.25rem 1.25rem 0.75rem' }}>
                             <p style={{ fontSize: '0.625rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.1em', margin: '0 0 0.75rem 0' }}>Coordonnées</p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                <ContactRow icon={Mail} label="Email" value={actor.email} href={`mailto:${actor.email}`} isLink />
-                                <ContactRow icon={Phone} label="Tél" value={actor.phone} href={`tel:${actor.phone}`} isLink />
-                                <ContactRow icon={MapPin} label="Adresse" value={actor.address} />
-                                <ContactRow icon={Globe} label="Source" value={actor.source} />
-                            </div>
+                            {isEditing ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                                    {actor.type === 'INDIVIDUAL' ? (
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                            <EditField label="Prénom" value={editForm.firstName} onChange={v => setField('firstName', v)} />
+                                            <EditField label="Nom" value={editForm.lastName} onChange={v => setField('lastName', v)} />
+                                        </div>
+                                    ) : (
+                                        <EditField label="Raison sociale" value={editForm.companyName} onChange={v => setField('companyName', v)} />
+                                    )}
+                                    <EditField label="Email" value={editForm.email} onChange={v => setField('email', v)} type="email" />
+                                    <EditField label="Téléphone" value={editForm.phone} onChange={v => setField('phone', v)} type="tel" />
+                                    <EditField label="Adresse" value={editForm.address} onChange={v => setField('address', v)} />
+                                    <EditField label="Source" value={editForm.source} onChange={v => setField('source', v)} />
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    <ContactRow icon={Mail} label="Email" value={actor.email} href={`mailto:${actor.email}`} isLink />
+                                    <ContactRow icon={Phone} label="Tél" value={actor.phone} href={`tel:${actor.phone}`} isLink />
+                                    <ContactRow icon={MapPin} label="Adresse" value={actor.address} />
+                                    <ContactRow icon={Globe} label="Source" value={actor.source} />
+                                </div>
+                            )}
                         </div>
 
                         {/* Tags */}
                         <div style={{ padding: '0.75rem 1.25rem 1.25rem', borderTop: '1px solid #f3f4f6' }}>
-                            <p style={{ fontSize: '0.625rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.1em', margin: '0 0 0.75rem 0' }}>Tags</p>
-                            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '0.375rem' }}>
-                                {actor.tags && actor.tags.length > 0 ? actor.tags.map(tag => (
-                                    <span key={tag} style={{ padding: '0.125rem 0.5rem', background: '#f3f4f6', color: '#4b5563', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 500, border: '1px solid #e5e7eb' }}>{tag}</span>
-                                )) : <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>Non classifié</span>}
-                            </div>
+                            <p style={{ fontSize: '0.625rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.1em', margin: '0 0 0.75rem 0' }}>Tags & Statut</p>
+                            {isEditing ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                                    <EditField label="Tags (séparés par virgule)" value={editForm.tagsInput} onChange={v => setField('tagsInput', v)} placeholder="ex: vip, partenaire" />
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem', color: '#374151', fontWeight: 500 }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={editForm.inactive}
+                                            onChange={e => setField('inactive', e.target.checked)}
+                                            style={{ width: '1rem', height: '1rem', accentColor: '#ef4444', cursor: 'pointer' }}
+                                        />
+                                        Marquer comme inactif
+                                    </label>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '0.375rem' }}>
+                                    {actor.tags && actor.tags.length > 0 ? actor.tags.map(tag => (
+                                        <span key={tag} style={{ padding: '0.125rem 0.5rem', background: '#f3f4f6', color: '#4b5563', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 500, border: '1px solid #e5e7eb' }}>{tag}</span>
+                                    )) : <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>Non classifié</span>}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -174,12 +298,14 @@ export const ActorDetailsPage = () => {
                     {/* Tabs */}
                     <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', padding: '0 0.5rem', paddingTop: '0.5rem' }}>
                         {([
-                            { key: 'timeline', label: 'Activité', icon: Activity, count: null },
-                            { key: 'deals', label: 'Opportunités', icon: TrendingUp, count: 0 },
-                            { key: 'documents', label: 'Documents', icon: FileText, count: 0 },
-                            { key: 'tasks', label: 'Tâches', icon: CheckSquare, count: 0 },
+                            { key: 'timeline',  label: 'Activité',      icon: Activity,    count: null },
+                            { key: 'deals',     label: 'Opportunités',  icon: TrendingUp,  count: 0 },
+                            { key: 'quotes',    label: 'Devis',         icon: FileText,    count: null },
+                            { key: 'invoices',  label: 'Factures',      icon: Euro,        count: null },
+                            { key: 'documents', label: 'Documents',     icon: FileText,    count: 0 },
+                            { key: 'tasks',     label: 'Tâches',        icon: CheckSquare, count: 0 },
                         ] as const).map(tab => (
-                            <TabButton key={tab.key} active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)} label={tab.label} icon={tab.icon} count={tab.count} />
+                            <TabButton key={tab.key} active={activeTab === tab.key} onClick={() => setActiveTab(tab.key as any)} label={tab.label} icon={tab.icon} count={tab.count} />
                         ))}
                     </div>
 
@@ -187,7 +313,9 @@ export const ActorDetailsPage = () => {
                     <div style={{ padding: '1.25rem', minHeight: '420px' }}>
                         {activeTab === 'timeline' && <Timeline key={refreshKey} actorId={actor.id} />}
                         {activeTab === 'documents' && <DocumentList key={refreshKey} actorId={actor.id} />}
-                        {activeTab === 'tasks' && <ClientTaskList key={refreshKey} actorId={actor.id} />}
+                        {activeTab === 'tasks' && <ClientTaskList key={refreshKey} actorId={actor.id} onAddClick={() => setIsTaskModalOpen(true)} />}
+                        {activeTab === 'quotes' && <ActorQuoteTab actorId={actor.id} />}
+                        {activeTab === 'invoices' && <ActorInvoiceTab actorId={actor.id} />}
                         {activeTab === 'deals' && (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 2rem', textAlign: 'center' }}>
                                 <div style={{ width: '3.5rem', height: '3.5rem', background: '#f3f4f6', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
@@ -250,5 +378,18 @@ const TabButton = ({ active, onClick, label, icon: Icon, count }: any) => (
             <span style={{ fontSize: '0.625rem', padding: '0.125rem 0.375rem', borderRadius: '0.375rem', fontWeight: 700, background: active ? '#e0e7ff' : '#f3f4f6', color: active ? '#4f46e5' : '#6b7280' }}>{count}</span>
         )}
     </button>
+);
+
+const EditField = ({ label, value, onChange, type = 'text', placeholder }: { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) => (
+    <div>
+        <label style={{ fontSize: '0.625rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.08em', display: 'block', marginBottom: '0.25rem' }}>{label}</label>
+        <input
+            type={type}
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder={placeholder}
+            style={{ width: '100%', padding: '0.4rem 0.625rem', fontSize: '0.8125rem', color: '#111827', background: '#f9fafb', border: '1px solid #d1d5db', borderRadius: '0.5rem', outline: 'none', boxSizing: 'border-box' as const }}
+        />
+    </div>
 );
 

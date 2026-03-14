@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { ActorService, ActorType } from '../services/actor.service';
 import type { Actor } from '../services/actor.service';
-import { Plus, Building2, User } from 'lucide-react';
+import { Plus, Building2, User, Upload } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ImportCsvModal } from '../components/ImportCsvModal';
 
 export const ActorsListPage = () => {
     const navigate = useNavigate();
     const [actors, setActors] = useState<Actor[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [showImport, setShowImport] = useState(false);
 
     useEffect(() => {
         loadActors();
@@ -20,7 +22,7 @@ export const ActorsListPage = () => {
             const data = await ActorService.getAll();
             setActors(data);
         } catch (err) {
-            setError('Failed to load actors.');
+            setError('Impossible de charger les clients.');
             console.error(err);
         } finally {
             setIsLoading(false);
@@ -40,30 +42,49 @@ export const ActorsListPage = () => {
     }
 
     return (
-        <div>
+        <><div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
                     <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'hsl(var(--text-1))' }}>Clients</h1>
                     <p style={{ color: 'hsl(var(--text-2))' }}>Gérez vos clients, prospects et partenaires.</p>
                 </div>
-                <Link
-                    to="/actors/new"
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        background: 'var(--color-primary)',
-                        color: 'var(--color-on-primary)',
-                        padding: '0.75rem 1rem',
-                        borderRadius: 'var(--radius-md)',
-                        textDecoration: 'none',
-                        fontWeight: 600,
-                        boxShadow: 'var(--shadow-md)'
-                    }}
-                >
-                    <Plus size={20} />
-                    Nouveau Client
-                </Link>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button
+                        onClick={() => setShowImport(true)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            background: '#fff',
+                            color: '#4f46e5',
+                            padding: '0.75rem 1rem',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid #c7d2fe',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            fontSize: '0.9375rem',
+                        }}
+                    >
+                        <Upload size={18} />
+                        Importer CSV
+                    </button>
+                    <Link
+                        to="/actors/new"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            background: 'var(--color-primary)',
+                            color: 'var(--color-on-primary)',
+                            padding: '0.75rem 1rem',
+                            borderRadius: 'var(--radius-md)',
+                            textDecoration: 'none',
+                            fontWeight: 600,
+                            boxShadow: 'var(--shadow-md)'
+                        }}
+                    >
+                        <Plus size={20} />
+                        Nouveau Client
+                    </Link>
+                </div>
             </div>
 
             {/* Empty State */}
@@ -157,6 +178,14 @@ export const ActorsListPage = () => {
                 </div>
             )}
         </div>
+
+        {showImport && (
+            <ImportCsvModal
+                onClose={() => setShowImport(false)}
+                onSuccess={() => { setShowImport(false); loadActors(); }}
+            />
+        )}
+        </>
     );
 };
 

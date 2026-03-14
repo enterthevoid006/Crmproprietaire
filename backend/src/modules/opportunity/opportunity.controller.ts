@@ -21,17 +21,11 @@ export class OpportunityController {
     @Get()
     async findAll() {
         const results = await this.getOpportunitiesUseCase.execute();
-        console.log(`[DEBUG] OpportunityController.findAll returning ${results.length} items`);
 
-        const response = results.map(op => ({
+        return results.map(op => ({
             id: op.id,
             ...op.getProps(),
         }));
-
-        if (response.length > 0) {
-            console.log(`[DEBUG] Sample item stage (flat): ${response[0].stage}`);
-        }
-        return response;
     }
 
     @Patch(':id')
