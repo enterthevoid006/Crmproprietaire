@@ -526,6 +526,16 @@ export const DashboardLayout = () => {
         setSidebarOpen(false);
     }, [location.pathname]);
 
+    // Lock body scroll when mobile sidebar is open
+    useEffect(() => {
+        if (isMobile && sidebarOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [isMobile, sidebarOpen]);
+
     const isFullWidthPage = location.pathname.startsWith('/opportunities') || location.pathname.startsWith('/actors');
 
     const handleLogout = () => {
@@ -544,7 +554,7 @@ export const DashboardLayout = () => {
     ];
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', background: 'hsl(var(--surface-1))', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', minHeight: '100vh', background: 'hsl(var(--surface-1))', overflowX: 'hidden' }}>
 
             {/* Mobile overlay */}
             {isMobile && sidebarOpen && (
