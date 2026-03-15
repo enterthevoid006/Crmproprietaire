@@ -11,7 +11,7 @@ export class EmailService {
     constructor(private configService: ConfigService) {
         const user = this.configService.get<string>('MAIL_USER') ?? '';
         const pass = this.configService.get<string>('MAIL_PASSWORD') ?? '';
-        this.from = 'noreply@bonjour-crm.fr';
+        this.from = process.env.MAIL_USER ?? '';
 
         this.transporter = nodemailer.createTransport({
             host: 'smtp-relay.brevo.com',
