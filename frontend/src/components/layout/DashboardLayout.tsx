@@ -551,9 +551,10 @@ export const DashboardLayout = () => {
                 <div
                     onClick={() => setSidebarOpen(false)}
                     style={{
-                        position: 'fixed', inset: 0,
+                        position: 'fixed', top: 0, left: 0,
+                        width: '100vw', height: '100vh',
                         background: 'rgba(0,0,0,0.5)',
-                        zIndex: 49,
+                        zIndex: 999,
                     }}
                 />
             )}
@@ -564,9 +565,9 @@ export const DashboardLayout = () => {
                 background: 'hsl(var(--surface-2))',
                 borderRight: '1px solid var(--border-1)',
                 display: 'flex', flexDirection: 'column',
-                position: 'fixed', height: '100vh', zIndex: 50,
+                position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 1000,
                 transform: isMobile
-                    ? (sidebarOpen ? 'translateX(0)' : 'translateX(-260px)')
+                    ? (sidebarOpen ? 'translateX(0)' : 'translateX(-100%)')
                     : 'translateX(0)',
                 transition: 'transform 0.3s ease',
             }}>
