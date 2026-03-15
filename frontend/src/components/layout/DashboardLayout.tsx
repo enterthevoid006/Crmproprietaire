@@ -590,13 +590,17 @@ export const DashboardLayout = () => {
                     <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {navItems.map(item => (
                             <li key={item.path}>
-                                <NavLink to={item.path} style={({ isActive }) => ({
-                                    display: 'flex', alignItems: 'center', gap: '0.75rem',
-                                    padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
-                                    color: isActive ? 'var(--color-primary)' : 'hsl(var(--text-2))',
-                                    background: isActive ? 'hsla(var(--primary-hue), var(--primary-sat), 96%)' : 'transparent',
-                                    fontWeight: isActive ? 600 : 500, transition: 'all 0.2s', textDecoration: 'none',
-                                })}>
+                                <NavLink
+                                    to={item.path}
+                                    onClick={() => setSidebarOpen(false)}
+                                    style={({ isActive }) => ({
+                                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                        padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
+                                        color: isActive ? 'var(--color-primary)' : 'hsl(var(--text-2))',
+                                        background: isActive ? 'hsla(var(--primary-hue), var(--primary-sat), 96%)' : 'transparent',
+                                        fontWeight: isActive ? 600 : 500, transition: 'all 0.2s', textDecoration: 'none',
+                                    })}
+                                >
                                     <item.icon size={20} />
                                     {item.label}
                                 </NavLink>
@@ -606,14 +610,18 @@ export const DashboardLayout = () => {
                 </nav>
 
                 <div style={{ padding: '1rem', borderTop: '1px solid var(--border-1)' }}>
-                    <NavLink to="/settings" style={({ isActive }) => ({
-                        display: 'flex', alignItems: 'center', gap: '0.75rem',
-                        padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
-                        color: isActive ? 'var(--color-primary)' : 'hsl(var(--text-2))',
-                        background: isActive ? 'hsla(var(--primary-hue), var(--primary-sat), 96%)' : 'transparent',
-                        fontWeight: isActive ? 600 : 500, transition: 'all 0.2s',
-                        textDecoration: 'none', marginBottom: '0.75rem', fontSize: '0.9375rem',
-                    })}>
+                    <NavLink
+                        to="/settings"
+                        onClick={() => setSidebarOpen(false)}
+                        style={({ isActive }) => ({
+                            display: 'flex', alignItems: 'center', gap: '0.75rem',
+                            padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
+                            color: isActive ? 'var(--color-primary)' : 'hsl(var(--text-2))',
+                            background: isActive ? 'hsla(var(--primary-hue), var(--primary-sat), 96%)' : 'transparent',
+                            fontWeight: isActive ? 600 : 500, transition: 'all 0.2s',
+                            textDecoration: 'none', marginBottom: '0.75rem', fontSize: '0.9375rem',
+                        })}
+                    >
                         <Settings size={20} />
                         Paramètres
                     </NavLink>
