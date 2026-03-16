@@ -34,6 +34,11 @@ export const TaskService = {
         return response.data;
     },
 
+    getByOpportunity: async (opportunityId: string): Promise<Task[]> => {
+        const response = await api.get<Task[]>(`/tasks?opportunityId=${opportunityId}`);
+        return response.data;
+    },
+
     create: async (data: CreateTaskDTO): Promise<Task> => {
         const response = await api.post<Task>('/tasks', data);
         return response.data;

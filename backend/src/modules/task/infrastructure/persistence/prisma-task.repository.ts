@@ -25,6 +25,16 @@ export class PrismaTaskRepository implements TaskRepositoryPort {
         });
     }
 
+    async findByOpportunityId(opportunityId: string): Promise<Task[]> {
+        const tenantId = TenantContext.getTenantIdOrThrow();
+        const rawTasks = await this.prisma.task.findMany({
+            where: { tenantId, opportunityId },
+            orderBy: { dueDate: 'asc' },
+            include: { actor: true },
+        });
+        return rawTasks.map(t => TaskMapper.toDomain(t as any));
+    }
+
     async findById(id: string): Promise<Task | null> {
         const tenantId = TenantContext.getTenantIdOrThrow();
 

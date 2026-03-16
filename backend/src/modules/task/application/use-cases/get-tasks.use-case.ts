@@ -10,8 +10,11 @@ export class GetTasksUseCase {
         @Inject(TASK_REPOSITORY) private taskRepo: TaskRepositoryPort,
     ) { }
 
-    async execute(): Promise<Task[]> {
+    async execute(filter?: { opportunityId?: string }): Promise<Task[]> {
         const tenantId = TenantContext.getTenantIdOrThrow();
+        if (filter?.opportunityId) {
+            return this.taskRepo.findByOpportunityId(filter.opportunityId);
+        }
         return this.taskRepo.findAll(tenantId);
     }
 }

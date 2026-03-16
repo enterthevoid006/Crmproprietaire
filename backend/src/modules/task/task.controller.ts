@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { CreateTaskUseCase, CreateTaskRequest } from './application/use-cases/create-task.use-case';
 import { GetTasksUseCase } from './application/use-cases/get-tasks.use-case';
 import { UpdateTaskStatusUseCase } from './application/use-cases/update-task-status.use-case';
@@ -22,8 +22,8 @@ export class TaskController {
     }
 
     @Get()
-    async findAll() {
-        const tasks = await this.getTasksUseCase.execute();
+    async findAll(@Query('opportunityId') opportunityId?: string) {
+        const tasks = await this.getTasksUseCase.execute({ opportunityId });
         return tasks.map(t => ({
             id: t.id,
             ...t.getProps()
