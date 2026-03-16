@@ -53,7 +53,8 @@ export class AuthService {
     }
 
     async verifyEmail(token: string): Promise<void> {
-        console.log('[AuthService] verifyEmail — recherche token en base:', token);
+        console.log('[VERIFY] Token reçu:', token.substring(0, 10) + '...');
+        console.log('[VERIFY] Longueur token:', token.length);
         const user = await this.userRepo.findByVerificationToken(token);
         console.log('[AuthService] verifyEmail — user trouvé:', user ? `id=${user.id} email=${user.email}` : 'null');
         if (!user) {
