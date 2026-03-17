@@ -3,9 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { OpportunityService, type Opportunity } from '../services/opportunity.service';
 import { TaskService, type Task } from '../../tasks/services/task.service';
 import { InteractionService, type Interaction } from '../../interactions/services/interaction.service';
+import { useIsMobile } from '../../../hooks/useIsMobile';
 import {
     ArrowLeft, DollarSign, Calendar, Building2, User, CheckSquare, FileText, Plus,
-    TrendingUp, Activity, Target, MessageSquare, Phone, Mail, Users, Trash2, X, Check, Clock,
+    TrendingUp, Target, MessageSquare, Phone, Mail, Users, Trash2, X, Check, Clock,
+    Edit2, Activity,
 } from 'lucide-react';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -17,7 +19,20 @@ const STAGE_COLORS: Record<string, { bg: string; text: string; border: string; l
     NEGOTIATION:   { bg: '#fff7ed', text: '#c2410c', border: '#fed7aa', label: 'Négociation' },
     CLOSED_WON:    { bg: '#ecfdf5', text: '#059669', border: '#a7f3d0', label: 'Gagné' },
     CLOSED_LOST:   { bg: '#fef2f2', text: '#dc2626', border: '#fecaca', label: 'Perdu' },
+    NEW:           { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0', label: 'Nouveau' },
+    QUALIFIED:     { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe', label: 'Qualifié' },
+    WON:           { bg: '#ecfdf5', text: '#059669', border: '#a7f3d0', label: 'Gagné' },
+    LOST:          { bg: '#fef2f2', text: '#dc2626', border: '#fecaca', label: 'Perdu' },
 };
+
+const STAGE_OPTIONS: Array<{ value: Opportunity['stage']; label: string }> = [
+    { value: 'NEW',         label: 'Nouveau' },
+    { value: 'QUALIFIED',   label: 'Qualifié' },
+    { value: 'PROPOSAL',    label: 'Proposition' },
+    { value: 'NEGOTIATION', label: 'Négociation' },
+    { value: 'WON',         label: 'Gagné' },
+    { value: 'LOST',        label: 'Perdu' },
+];
 
 const PRIORITY_CONFIG = {
     HIGH:   { label: 'Haute',  color: '#ef4444', bg: '#fef2f2' },
@@ -57,12 +72,13 @@ const inputStyle: React.CSSProperties = {
 // ─── Task Modal ───────────────────────────────────────────────────────────────
 
 const TaskModal: React.FC<{ opportunityId: string; onClose: () => void; onSuccess: () => void }> = ({ opportunityId, onClose, onSuccess }) => {
-    const [title, setTitle]           = useState('');
+    const isMobile = useIsMobile();
+    const [title, setTitle]             = useState('');
     const [description, setDescription] = useState('');
-    const [priority, setPriority]     = useState<'LOW' | 'MEDIUM' | 'HIGH'>('MEDIUM');
-    const [dueDate, setDueDate]       = useState('');
-    const [submitting, setSubmitting] = useState(false);
-    const [error, setError]           = useState('');
+    const [priority, setPriority]       = useState<'LOW' | 'MEDIUM' | 'HIGH'>('MEDIUM');
+    const [dueDate, setDueDate]         = useState('');
+    const [submitting, setSubmitting]   = useState(false);
+    const [error, setError]             = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -72,7 +88,7 @@ const TaskModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
             await TaskService.create({ title: title.trim(), description: description.trim() || undefined, priority, dueDate: dueDate || undefined, opportunityId });
             onSuccess();
             onClose();
-        } catch (err) {
+        } catch {
             setError('Erreur lors de la création');
         } finally {
             setSubmitting(false);
@@ -81,22 +97,19 @@ const TaskModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
 
     return (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-            <div style={{ background: '#fff', borderRadius: '1rem', width: '100%', maxWidth: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ background: '#fff', borderRadius: '1rem', width: isMobile ? '95vw' : '100%', maxWidth: isMobile ? undefined : '480px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 1.5rem', borderBottom: '1px solid #f3f4f6' }}>
                     <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>Nouvelle tâche</h2>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', padding: 0 }}><X size={18} /></button>
                 </div>
                 <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {error && <div style={{ padding: '0.625rem 0.875rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', fontSize: '0.8125rem', color: '#dc2626' }}>{error}</div>}
-
                     <ModalField label="Titre *">
                         <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Nom de la tâche" autoFocus style={inputStyle} />
                     </ModalField>
-
                     <ModalField label="Description">
                         <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description optionnelle" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
                     </ModalField>
-
                     <ModalField label="Priorité">
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                             {(['LOW', 'MEDIUM', 'HIGH'] as const).map(p => (
@@ -106,11 +119,9 @@ const TaskModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
                             ))}
                         </div>
                     </ModalField>
-
                     <ModalField label="Date d'échéance">
                         <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputStyle} />
                     </ModalField>
-
                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '0.25rem' }}>
                         <button type="button" onClick={onClose} style={{ padding: '0.5rem 1.25rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }}>Annuler</button>
                         <button type="submit" disabled={submitting} style={{ padding: '0.5rem 1.25rem', background: '#4f46e5', border: 'none', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 600, color: '#fff', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
@@ -123,9 +134,10 @@ const TaskModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
     );
 };
 
-// ─── Note (Interaction) Modal ─────────────────────────────────────────────────
+// ─── Note Modal ───────────────────────────────────────────────────────────────
 
 const NoteModal: React.FC<{ opportunityId: string; onClose: () => void; onSuccess: () => void }> = ({ opportunityId, onClose, onSuccess }) => {
+    const isMobile = useIsMobile();
     const [type, setType]             = useState<'NOTE' | 'CALL' | 'EMAIL' | 'MEETING'>('NOTE');
     const [summary, setSummary]       = useState('');
     const [date, setDate]             = useState('');
@@ -140,7 +152,7 @@ const NoteModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
             await InteractionService.create({ type, summary: summary.trim(), date: date || undefined, opportunityId });
             onSuccess();
             onClose();
-        } catch (err) {
+        } catch {
             setError('Erreur lors de la création');
         } finally {
             setSubmitting(false);
@@ -151,14 +163,13 @@ const NoteModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
 
     return (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-            <div style={{ background: '#fff', borderRadius: '1rem', width: '100%', maxWidth: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ background: '#fff', borderRadius: '1rem', width: isMobile ? '95vw' : '100%', maxWidth: isMobile ? undefined : '480px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 1.5rem', borderBottom: '1px solid #f3f4f6' }}>
                     <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>Nouvelle activité</h2>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', padding: 0 }}><X size={18} /></button>
                 </div>
                 <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {error && <div style={{ padding: '0.625rem 0.875rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', fontSize: '0.8125rem', color: '#dc2626' }}>{error}</div>}
-
                     <ModalField label="Type">
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                             {types.map(t => {
@@ -172,15 +183,12 @@ const NoteModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
                             })}
                         </div>
                     </ModalField>
-
                     <ModalField label="Contenu *">
                         <textarea value={summary} onChange={e => setSummary(e.target.value)} placeholder="Décrivez l'activité…" rows={4} autoFocus style={{ ...inputStyle, resize: 'vertical' }} />
                     </ModalField>
-
                     <ModalField label="Date">
                         <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
                     </ModalField>
-
                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '0.25rem' }}>
                         <button type="button" onClick={onClose} style={{ padding: '0.5rem 1.25rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }}>Annuler</button>
                         <button type="submit" disabled={submitting} style={{ padding: '0.5rem 1.25rem', background: '#4f46e5', border: 'none', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 600, color: '#fff', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
@@ -196,8 +204,10 @@ const NoteModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export const OpportunityDetailsPage = () => {
-    const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
+    const { id }    = useParams<{ id: string }>();
+    const navigate  = useNavigate();
+    const isMobile  = useIsMobile();
+
     const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
     const [isLoading, setIsLoading]     = useState(true);
     const [error, setError]             = useState('');
@@ -205,15 +215,26 @@ export const OpportunityDetailsPage = () => {
     const [refreshKey, setRefreshKey]   = useState(0);
     const [successMsg, setSuccessMsg]   = useState('');
 
-    // Tasks state
-    const [tasks, setTasks]             = useState<Task[]>([]);
-    const [tasksLoading, setTasksLoading] = useState(false);
+    // Edit mode
+    const [isEditing, setIsEditing] = useState(false);
+    const [saving, setSaving]       = useState(false);
+    const [editForm, setEditForm]   = useState({
+        name: '',
+        amount: 0,
+        probability: 0,
+        expectedCloseDate: '',
+        stage: 'NEW' as Opportunity['stage'],
+    });
+
+    // Tasks
+    const [tasks, setTasks]                   = useState<Task[]>([]);
+    const [tasksLoading, setTasksLoading]     = useState(false);
     const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
 
-    // Notes/Interactions state
-    const [interactions, setInteractions] = useState<Interaction[]>([]);
-    const [notesLoading, setNotesLoading] = useState(false);
-    const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+    // Notes
+    const [interactions, setInteractions]         = useState<Interaction[]>([]);
+    const [notesLoading, setNotesLoading]         = useState(false);
+    const [isNoteModalOpen, setIsNoteModalOpen]   = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -224,21 +245,20 @@ export const OpportunityDetailsPage = () => {
             .finally(() => setIsLoading(false));
     }, [id]);
 
-    // Lazy-load tab data
     useEffect(() => {
         if (!id) return;
         if (activeTab === 'tasks') {
             setTasksLoading(true);
             TaskService.getByOpportunity(id)
                 .then(setTasks)
-                .catch(err => console.error(err))
+                .catch(console.error)
                 .finally(() => setTasksLoading(false));
         }
         if (activeTab === 'notes') {
             setNotesLoading(true);
             InteractionService.getByOpportunity(id)
                 .then(setInteractions)
-                .catch(err => console.error(err))
+                .catch(console.error)
                 .finally(() => setNotesLoading(false));
         }
     }, [activeTab, id, refreshKey]);
@@ -247,6 +267,42 @@ export const OpportunityDetailsPage = () => {
         setRefreshKey(k => k + 1);
         setSuccessMsg(msg);
         setTimeout(() => setSuccessMsg(''), 3000);
+    };
+
+    const startEdit = () => {
+        if (!opportunity) return;
+        setEditForm({
+            name: opportunity.name,
+            amount: opportunity.amount,
+            probability: opportunity.probability,
+            expectedCloseDate: opportunity.expectedCloseDate ? opportunity.expectedCloseDate.slice(0, 10) : '',
+            stage: opportunity.stage,
+        });
+        setIsEditing(true);
+    };
+
+    const cancelEdit = () => setIsEditing(false);
+
+    const handleSave = async () => {
+        if (!id) return;
+        setSaving(true);
+        try {
+            const updated = await OpportunityService.update(id, {
+                name: editForm.name,
+                amount: editForm.amount,
+                probability: editForm.probability,
+                expectedCloseDate: editForm.expectedCloseDate || undefined,
+                stage: editForm.stage,
+            });
+            setOpportunity(updated);
+            setIsEditing(false);
+            setSuccessMsg('Modifications enregistrées');
+            setTimeout(() => setSuccessMsg(''), 3000);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleToggleTask = async (task: Task) => {
@@ -290,13 +346,13 @@ export const OpportunityDetailsPage = () => {
         </div>
     );
 
-    const stageColor  = getStageColor(opportunity.stage);
-    const isOverdue   = opportunity.expectedCloseDate && new Date(opportunity.expectedCloseDate) < new Date();
+    const stageColor      = getStageColor(opportunity.stage);
+    const isOverdue       = opportunity.expectedCloseDate && new Date(opportunity.expectedCloseDate) < new Date();
     const formattedAmount = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(opportunity.amount);
-    const displayName = opportunity.actor?.companyName || (opportunity.actor ? `${opportunity.actor.firstName} ${opportunity.actor.lastName}` : null);
+    const displayName     = opportunity.actor?.companyName || (opportunity.actor ? `${opportunity.actor.firstName} ${opportunity.actor.lastName}` : null);
 
     return (
-        <div style={{ padding: '1.5rem', background: '#f8fafc', minHeight: '100vh' }}>
+        <div style={{ padding: isMobile ? '1rem' : '1.5rem', background: '#f8fafc', minHeight: '100vh' }}>
 
             {/* Success toast */}
             {successMsg && (
@@ -310,41 +366,70 @@ export const OpportunityDetailsPage = () => {
             {isNoteModalOpen && <NoteModal opportunityId={id!} onClose={() => setIsNoteModalOpen(false)} onSuccess={() => handleSuccess('Activité ajoutée')} />}
 
             {/* Top Bar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', fontWeight: 500, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} onClick={() => navigate('/opportunities')}>
                     <ArrowLeft size={15} /> Retour au pipeline
                 </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <button onClick={() => { setIsTaskModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
-                        <CheckSquare size={14} /> Tâche
-                    </button>
-                    <button onClick={() => { setIsNoteModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
-                        <FileText size={14} /> Note
-                    </button>
+                    {isEditing ? (
+                        <>
+                            <button onClick={cancelEdit} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#6b7280', cursor: 'pointer' }}>
+                                <X size={14} /> Annuler
+                            </button>
+                            <button onClick={handleSave} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#4f46e5', border: 'none', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 600, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                                <Check size={14} /> {saving ? 'Enregistrement…' : 'Enregistrer'}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button onClick={startEdit} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
+                                <Edit2 size={14} /> Modifier
+                            </button>
+                            <button onClick={() => setIsTaskModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
+                                <CheckSquare size={14} /> Tâche
+                            </button>
+                            <button onClick={() => setIsNoteModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
+                                <FileText size={14} /> Note
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
-            {/* Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '1.25rem', alignItems: 'start' }}>
+            {/* Grid — 1 col on mobile, sidebar + main on desktop */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '320px 1fr', gap: '1.25rem', alignItems: 'start' }}>
 
                 {/* ── SIDEBAR ── */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
                     {/* Identity Card */}
                     <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+
+                        {/* Header */}
                         <div style={{ padding: '1.25rem', borderBottom: '1px solid #f3f4f6', background: 'linear-gradient(to bottom, #f9fafb, #fff)' }}>
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                                 <div style={{ width: '3rem', height: '3rem', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#eef2ff', border: '1px solid #c7d2fe' }}>
                                     <Target size={20} color="#4f46e5" />
                                 </div>
                                 <div style={{ minWidth: 0, flex: 1 }}>
-                                    <h1 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111827', margin: 0, lineHeight: 1.3 }}>{opportunity.name}</h1>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.375rem', flexWrap: 'wrap' as const }}>
-                                        <span style={{ padding: '0.125rem 0.5rem', fontSize: '0.625rem', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em', borderRadius: '0.375rem', background: stageColor.bg, color: stageColor.text, border: `1px solid ${stageColor.border}` }}>
-                                            {stageColor.label}
-                                        </span>
-                                        <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontFamily: 'monospace' }}>{opportunity.id.slice(0, 8)}</span>
-                                    </div>
+                                    {isEditing ? (
+                                        <input
+                                            type="text"
+                                            value={editForm.name}
+                                            onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                                            style={{ ...inputStyle, fontSize: '0.9375rem', fontWeight: 700 }}
+                                        />
+                                    ) : (
+                                        <>
+                                            <h1 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111827', margin: 0, lineHeight: 1.3 }}>{opportunity.name}</h1>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.375rem', flexWrap: 'wrap' as const }}>
+                                                <span style={{ padding: '0.125rem 0.5rem', fontSize: '0.625rem', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em', borderRadius: '0.375rem', background: stageColor.bg, color: stageColor.text, border: `1px solid ${stageColor.border}` }}>
+                                                    {stageColor.label}
+                                                </span>
+                                                <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontFamily: 'monospace' }}>{opportunity.id.slice(0, 8)}</span>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -352,11 +437,32 @@ export const OpportunityDetailsPage = () => {
                         {/* Financier */}
                         <div style={{ padding: '1.25rem 1.25rem 0.75rem' }}>
                             <p style={{ fontSize: '0.625rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.1em', margin: '0 0 0.75rem 0' }}>Financier</p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                <InfoRow icon={DollarSign} label="Montant" value={formattedAmount} bold />
-                                <InfoRow label="Probabilité" value={`${opportunity.probability}%`} valueColor={opportunity.probability > 70 ? '#059669' : '#374151'} bold={opportunity.probability > 70} />
-                                <InfoRow icon={Calendar} label="Clôture prévue" value={opportunity.expectedCloseDate ? new Date(opportunity.expectedCloseDate).toLocaleDateString('fr-FR') : undefined} valueColor={isOverdue ? '#dc2626' : '#374151'} />
-                            </div>
+                            {isEditing ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                                    <EditField label="Montant (€)">
+                                        <input type="number" min={0} step="0.01" value={editForm.amount} onChange={e => setEditForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))} style={inputStyle} />
+                                    </EditField>
+                                    <EditField label="Probabilité (%)">
+                                        <input type="number" min={0} max={100} value={editForm.probability} onChange={e => setEditForm(f => ({ ...f, probability: parseInt(e.target.value) || 0 }))} style={inputStyle} />
+                                    </EditField>
+                                    <EditField label="Date de clôture prévue">
+                                        <input type="date" value={editForm.expectedCloseDate} onChange={e => setEditForm(f => ({ ...f, expectedCloseDate: e.target.value }))} style={inputStyle} />
+                                    </EditField>
+                                    <EditField label="Étape du pipeline">
+                                        <select value={editForm.stage} onChange={e => setEditForm(f => ({ ...f, stage: e.target.value as Opportunity['stage'] }))} style={{ ...inputStyle }}>
+                                            {STAGE_OPTIONS.map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </EditField>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    <InfoRow icon={DollarSign} label="Montant" value={formattedAmount} bold />
+                                    <InfoRow label="Probabilité" value={`${opportunity.probability}%`} valueColor={opportunity.probability > 70 ? '#059669' : '#374151'} bold={opportunity.probability > 70} />
+                                    <InfoRow icon={Calendar} label="Clôture prévue" value={opportunity.expectedCloseDate ? new Date(opportunity.expectedCloseDate).toLocaleDateString('fr-FR') : undefined} valueColor={isOverdue ? '#dc2626' : '#374151'} />
+                                </div>
+                            )}
                         </div>
 
                         {/* Client */}
@@ -387,15 +493,16 @@ export const OpportunityDetailsPage = () => {
 
                 {/* ── MAIN CONTENT ── */}
                 <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-                    {/* Tabs */}
-                    <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', padding: '0 0.5rem', paddingTop: '0.5rem' }}>
+
+                    {/* Tabs — scrollable on mobile */}
+                    <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', paddingTop: '0.5rem', overflowX: 'auto', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
                         <TabButton active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} label="Tâches" icon={CheckSquare} count={tasks.length || null} />
                         <TabButton active={activeTab === 'notes'} onClick={() => setActiveTab('notes')} label="Notes & Activité" icon={MessageSquare} count={interactions.length || null} />
                         <TabButton active={activeTab === 'quotes'} onClick={() => setActiveTab('quotes')} label="Devis" icon={FileText} count={null} />
                     </div>
 
                     {/* Content */}
-                    <div style={{ padding: '1.25rem', minHeight: '420px' }}>
+                    <div style={{ padding: isMobile ? '1rem' : '1.25rem', minHeight: '420px' }}>
 
                         {/* ─ TASKS TAB ─ */}
                         {activeTab === 'tasks' && (
@@ -408,7 +515,6 @@ export const OpportunityDetailsPage = () => {
                                         <Plus size={13} /> Ajouter une tâche
                                     </button>
                                 </div>
-
                                 {tasksLoading ? (
                                     <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af', fontSize: '0.875rem' }}>Chargement…</div>
                                 ) : tasks.length === 0 ? (
@@ -426,15 +532,9 @@ export const OpportunityDetailsPage = () => {
                                             const isTaskOverdue = task.dueDate && !isDone && new Date(task.dueDate) < new Date();
                                             return (
                                                 <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: isDone ? '#f9fafb' : '#fff', border: '1px solid #f3f4f6', borderRadius: '0.625rem' }}>
-                                                    {/* Round checkbox */}
-                                                    <button
-                                                        onClick={() => handleToggleTask(task)}
-                                                        style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, border: `2px solid ${isDone ? '#10b981' : '#d1d5db'}`, background: isDone ? '#10b981' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
-                                                    >
+                                                    <button onClick={() => handleToggleTask(task)} style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, border: `2px solid ${isDone ? '#10b981' : '#d1d5db'}`, background: isDone ? '#10b981' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                                                         {isDone && <Check size={12} color="#fff" />}
                                                     </button>
-
-                                                    {/* Content */}
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <span style={{ fontSize: '0.875rem', fontWeight: 500, color: isDone ? '#9ca3af' : '#111827', textDecoration: isDone ? 'line-through' : 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{task.title}</span>
                                                         {task.dueDate && (
@@ -443,13 +543,9 @@ export const OpportunityDetailsPage = () => {
                                                             </span>
                                                         )}
                                                     </div>
-
-                                                    {/* Priority badge */}
                                                     <span style={{ padding: '0.125rem 0.5rem', fontSize: '0.625rem', fontWeight: 700, borderRadius: '0.375rem', background: pc.bg, color: pc.color, flexShrink: 0 }}>
                                                         {pc.label}
                                                     </span>
-
-                                                    {/* Delete */}
                                                     <button onClick={() => handleDeleteTask(task.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', display: 'flex', padding: '0.25rem', flexShrink: 0, borderRadius: '0.375rem' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#d1d5db'; }}>
                                                         <Trash2 size={14} />
                                                     </button>
@@ -472,7 +568,6 @@ export const OpportunityDetailsPage = () => {
                                         <Plus size={13} /> Ajouter
                                     </button>
                                 </div>
-
                                 {notesLoading ? (
                                     <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af', fontSize: '0.875rem' }}>Chargement…</div>
                                 ) : interactions.length === 0 ? (
@@ -489,12 +584,9 @@ export const OpportunityDetailsPage = () => {
                                             const Icon = cfg.Icon;
                                             return (
                                                 <div key={interaction.id} style={{ display: 'flex', gap: '0.75rem', padding: '0.875rem', background: '#fff', border: '1px solid #f3f4f6', borderRadius: '0.625rem' }}>
-                                                    {/* Icon */}
                                                     <div style={{ width: '2rem', height: '2rem', borderRadius: '0.5rem', background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                                         <Icon size={14} color={cfg.color} />
                                                     </div>
-
-                                                    {/* Content */}
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                                                             <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: cfg.color, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{cfg.label}</span>
@@ -502,8 +594,6 @@ export const OpportunityDetailsPage = () => {
                                                         </div>
                                                         <p style={{ margin: 0, fontSize: '0.875rem', color: '#374151', lineHeight: 1.5, whiteSpace: 'pre-wrap' as const }}>{interaction.summary}</p>
                                                     </div>
-
-                                                    {/* Delete */}
                                                     <button onClick={() => handleDeleteInteraction(interaction.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', display: 'flex', padding: '0.25rem', flexShrink: 0, alignSelf: 'flex-start', borderRadius: '0.375rem' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#d1d5db'; }}>
                                                         <Trash2 size={14} />
                                                     </button>
@@ -576,6 +666,13 @@ const TabButton = ({ active, onClick, label, icon: Icon, count }: any) => (
 const ModalField: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
         <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#374151' }}>{label}</label>
+        {children}
+    </div>
+);
+
+const EditField: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+        <label style={{ fontSize: '0.625rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</label>
         {children}
     </div>
 );
