@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
+import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,6 +21,9 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
+
+  // Global exception filter — sanitizes error responses in production
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   // Strict Input Validation
   app.useGlobalPipes(new ValidationPipe({

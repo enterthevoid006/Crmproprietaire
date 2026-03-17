@@ -23,6 +23,7 @@ import InvoiceEditorPage from './modules/finance/pages/InvoiceEditorPage';
 import QuotesListPage from './modules/finance/pages/QuotesListPage';
 import QuoteEditorPage from './modules/finance/pages/QuoteEditorPage';
 import SettingsPage from './pages/SettingsPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 // Simple Protected Route Wrapper
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -90,7 +91,7 @@ function App() {
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
