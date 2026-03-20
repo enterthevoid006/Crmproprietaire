@@ -71,12 +71,13 @@ const inputStyle: React.CSSProperties = {
 
 // ─── Task Modal ───────────────────────────────────────────────────────────────
 
-const TaskModal: React.FC<{ opportunityId: string; onClose: () => void; onSuccess: () => void }> = ({ opportunityId, onClose, onSuccess }) => {
+const TaskModal: React.FC<{ opportunityId: string; initialTask?: Task; onClose: () => void; onSuccess: () => void }> = ({ opportunityId, initialTask, onClose, onSuccess }) => {
     const isMobile = useIsMobile();
-    const [title, setTitle]             = useState('');
-    const [description, setDescription] = useState('');
-    const [priority, setPriority]       = useState<'LOW' | 'MEDIUM' | 'HIGH'>('MEDIUM');
-    const [dueDate, setDueDate]         = useState('');
+    const isEdit   = !!initialTask;
+    const [title, setTitle]             = useState(initialTask?.title ?? '');
+    const [description, setDescription] = useState(initialTask?.description ?? '');
+    const [priority, setPriority]       = useState<'LOW' | 'MEDIUM' | 'HIGH'>(initialTask?.priority ?? 'MEDIUM');
+    const [dueDate, setDueDate]         = useState(initialTask?.dueDate ? initialTask.dueDate.slice(0, 10) : '');
     const [submitting, setSubmitting]   = useState(false);
     const [error, setError]             = useState('');
 
@@ -85,11 +86,15 @@ const TaskModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
         if (!title.trim()) { setError('Le titre est obligatoire'); return; }
         setSubmitting(true);
         try {
-            await TaskService.create({ title: title.trim(), description: description.trim() || undefined, priority, dueDate: dueDate || undefined, opportunityId });
+            if (isEdit) {
+                await TaskService.update(initialTask!.id, { title: title.trim(), priority, dueDate: dueDate || undefined });
+            } else {
+                await TaskService.create({ title: title.trim(), description: description.trim() || undefined, priority, dueDate: dueDate || undefined, opportunityId });
+            }
             onSuccess();
             onClose();
         } catch {
-            setError('Erreur lors de la création');
+            setError(isEdit ? 'Erreur lors de la modification' : 'Erreur lors de la création');
         } finally {
             setSubmitting(false);
         }
@@ -99,7 +104,7 @@ const TaskModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
             <div style={{ background: '#fff', borderRadius: '1rem', width: isMobile ? '95vw' : '100%', maxWidth: isMobile ? undefined : '480px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 1.5rem', borderBottom: '1px solid #f3f4f6' }}>
-                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>Nouvelle tâche</h2>
+                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>{isEdit ? 'Modifier la tâche' : 'Nouvelle tâche'}</h2>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', padding: 0 }}><X size={18} /></button>
                 </div>
                 <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -125,7 +130,7 @@ const TaskModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '0.25rem' }}>
                         <button type="button" onClick={onClose} style={{ padding: '0.5rem 1.25rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }}>Annuler</button>
                         <button type="submit" disabled={submitting} style={{ padding: '0.5rem 1.25rem', background: '#4f46e5', border: 'none', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 600, color: '#fff', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
-                            {submitting ? 'Création…' : 'Créer la tâche'}
+                            {submitting ? (isEdit ? 'Modification…' : 'Création…') : (isEdit ? 'Modifier' : 'Créer la tâche')}
                         </button>
                     </div>
                 </form>
@@ -136,11 +141,12 @@ const TaskModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
 
 // ─── Note Modal ───────────────────────────────────────────────────────────────
 
-const NoteModal: React.FC<{ opportunityId: string; onClose: () => void; onSuccess: () => void }> = ({ opportunityId, onClose, onSuccess }) => {
+const NoteModal: React.FC<{ opportunityId: string; initialInteraction?: Interaction; onClose: () => void; onSuccess: () => void }> = ({ opportunityId, initialInteraction, onClose, onSuccess }) => {
     const isMobile = useIsMobile();
-    const [type, setType]             = useState<'NOTE' | 'CALL' | 'EMAIL' | 'MEETING'>('NOTE');
-    const [summary, setSummary]       = useState('');
-    const [date, setDate]             = useState('');
+    const isEdit   = !!initialInteraction;
+    const [type, setType]             = useState<'NOTE' | 'CALL' | 'EMAIL' | 'MEETING'>((initialInteraction?.type as any) ?? 'NOTE');
+    const [summary, setSummary]       = useState(initialInteraction?.summary ?? '');
+    const [date, setDate]             = useState(initialInteraction?.date ? initialInteraction.date.slice(0, 10) : '');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError]           = useState('');
 
@@ -149,11 +155,15 @@ const NoteModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
         if (!summary.trim()) { setError('Le contenu est obligatoire'); return; }
         setSubmitting(true);
         try {
-            await InteractionService.create({ type, summary: summary.trim(), date: date || undefined, opportunityId });
+            if (isEdit) {
+                await InteractionService.update(initialInteraction!.id, { type, summary: summary.trim() });
+            } else {
+                await InteractionService.create({ type, summary: summary.trim(), date: date || undefined, opportunityId });
+            }
             onSuccess();
             onClose();
         } catch {
-            setError('Erreur lors de la création');
+            setError(isEdit ? 'Erreur lors de la modification' : 'Erreur lors de la création');
         } finally {
             setSubmitting(false);
         }
@@ -165,7 +175,7 @@ const NoteModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
             <div style={{ background: '#fff', borderRadius: '1rem', width: isMobile ? '95vw' : '100%', maxWidth: isMobile ? undefined : '480px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 1.5rem', borderBottom: '1px solid #f3f4f6' }}>
-                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>Nouvelle activité</h2>
+                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>{isEdit ? "Modifier l'activité" : 'Nouvelle activité'}</h2>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', padding: 0 }}><X size={18} /></button>
                 </div>
                 <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -192,7 +202,7 @@ const NoteModal: React.FC<{ opportunityId: string; onClose: () => void; onSucces
                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '0.25rem' }}>
                         <button type="button" onClick={onClose} style={{ padding: '0.5rem 1.25rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 500, color: '#374151', cursor: 'pointer' }}>Annuler</button>
                         <button type="submit" disabled={submitting} style={{ padding: '0.5rem 1.25rem', background: '#4f46e5', border: 'none', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 600, color: '#fff', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
-                            {submitting ? 'Création…' : 'Ajouter'}
+                            {submitting ? (isEdit ? 'Modification…' : 'Création…') : (isEdit ? 'Modifier' : 'Ajouter')}
                         </button>
                     </div>
                 </form>
@@ -227,14 +237,18 @@ export const OpportunityDetailsPage = () => {
     });
 
     // Tasks
-    const [tasks, setTasks]                   = useState<Task[]>([]);
-    const [tasksLoading, setTasksLoading]     = useState(false);
+    const [tasks, setTasks]                     = useState<Task[]>([]);
+    const [tasksLoading, setTasksLoading]       = useState(false);
     const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+    const [editingTask, setEditingTask]         = useState<Task | null>(null);
+    const [hoveredTaskId, setHoveredTaskId]     = useState<string | null>(null);
 
     // Notes
-    const [interactions, setInteractions]         = useState<Interaction[]>([]);
-    const [notesLoading, setNotesLoading]         = useState(false);
-    const [isNoteModalOpen, setIsNoteModalOpen]   = useState(false);
+    const [interactions, setInteractions]             = useState<Interaction[]>([]);
+    const [notesLoading, setNotesLoading]             = useState(false);
+    const [isNoteModalOpen, setIsNoteModalOpen]       = useState(false);
+    const [editingInteraction, setEditingInteraction] = useState<Interaction | null>(null);
+    const [hoveredNoteId, setHoveredNoteId]           = useState<string | null>(null);
 
     useEffect(() => {
         if (!id) return;
@@ -309,7 +323,7 @@ export const OpportunityDetailsPage = () => {
         const newStatus = task.status === 'DONE' ? 'TODO' : 'DONE';
         try {
             await TaskService.updateStatus(task.id, newStatus);
-            setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+            handleSuccess(newStatus === 'DONE' ? 'Tâche terminée' : 'Tâche réouverte');
         } catch (err) { console.error(err); }
     };
 
@@ -317,7 +331,7 @@ export const OpportunityDetailsPage = () => {
         if (!window.confirm('Supprimer cette tâche ?')) return;
         try {
             await TaskService.delete(taskId);
-            setTasks(prev => prev.filter(t => t.id !== taskId));
+            handleSuccess('Tâche supprimée');
         } catch (err) { console.error(err); }
     };
 
@@ -325,7 +339,7 @@ export const OpportunityDetailsPage = () => {
         if (!window.confirm('Supprimer cette activité ?')) return;
         try {
             await InteractionService.delete(interactionId);
-            setInteractions(prev => prev.filter(i => i.id !== interactionId));
+            handleSuccess('Activité supprimée');
         } catch (err) { console.error(err); }
     };
 
@@ -363,7 +377,9 @@ export const OpportunityDetailsPage = () => {
 
             {/* Modals */}
             {isTaskModalOpen && <TaskModal opportunityId={id!} onClose={() => setIsTaskModalOpen(false)} onSuccess={() => handleSuccess('Tâche créée')} />}
+            {editingTask && <TaskModal opportunityId={id!} initialTask={editingTask} onClose={() => setEditingTask(null)} onSuccess={() => handleSuccess('Tâche modifiée')} />}
             {isNoteModalOpen && <NoteModal opportunityId={id!} onClose={() => setIsNoteModalOpen(false)} onSuccess={() => handleSuccess('Activité ajoutée')} />}
+            {editingInteraction && <NoteModal opportunityId={id!} initialInteraction={editingInteraction} onClose={() => setEditingInteraction(null)} onSuccess={() => handleSuccess('Activité modifiée')} />}
 
             {/* Top Bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -531,7 +547,7 @@ export const OpportunityDetailsPage = () => {
                                             const pc = PRIORITY_CONFIG[task.priority] ?? PRIORITY_CONFIG.MEDIUM;
                                             const isTaskOverdue = task.dueDate && !isDone && new Date(task.dueDate) < new Date();
                                             return (
-                                                <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: isDone ? '#f9fafb' : '#fff', border: '1px solid #f3f4f6', borderRadius: '0.625rem' }}>
+                                                <div key={task.id} onMouseEnter={() => setHoveredTaskId(task.id)} onMouseLeave={() => setHoveredTaskId(null)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: isDone ? '#f9fafb' : '#fff', border: '1px solid #f3f4f6', borderRadius: '0.625rem' }}>
                                                     <button onClick={() => handleToggleTask(task)} style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, border: `2px solid ${isDone ? '#10b981' : '#d1d5db'}`, background: isDone ? '#10b981' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                                                         {isDone && <Check size={12} color="#fff" />}
                                                     </button>
@@ -546,6 +562,9 @@ export const OpportunityDetailsPage = () => {
                                                     <span style={{ padding: '0.125rem 0.5rem', fontSize: '0.625rem', fontWeight: 700, borderRadius: '0.375rem', background: pc.bg, color: pc.color, flexShrink: 0 }}>
                                                         {pc.label}
                                                     </span>
+                                                    <button onClick={() => setEditingTask(task)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', padding: '0.25rem', flexShrink: 0, borderRadius: '0.375rem', opacity: hoveredTaskId === task.id ? 1 : 0, transition: 'opacity 0.15s' }}>
+                                                        <Edit2 size={14} />
+                                                    </button>
                                                     <button onClick={() => handleDeleteTask(task.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', display: 'flex', padding: '0.25rem', flexShrink: 0, borderRadius: '0.375rem' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#d1d5db'; }}>
                                                         <Trash2 size={14} />
                                                     </button>
@@ -583,7 +602,7 @@ export const OpportunityDetailsPage = () => {
                                             const cfg = INTERACTION_TYPE_CONFIG[interaction.type] ?? INTERACTION_TYPE_CONFIG.OTHER;
                                             const Icon = cfg.Icon;
                                             return (
-                                                <div key={interaction.id} style={{ display: 'flex', gap: '0.75rem', padding: '0.875rem', background: '#fff', border: '1px solid #f3f4f6', borderRadius: '0.625rem' }}>
+                                                <div key={interaction.id} onMouseEnter={() => setHoveredNoteId(interaction.id)} onMouseLeave={() => setHoveredNoteId(null)} style={{ display: 'flex', gap: '0.75rem', padding: '0.875rem', background: '#fff', border: '1px solid #f3f4f6', borderRadius: '0.625rem' }}>
                                                     <div style={{ width: '2rem', height: '2rem', borderRadius: '0.5rem', background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                                         <Icon size={14} color={cfg.color} />
                                                     </div>
@@ -594,6 +613,9 @@ export const OpportunityDetailsPage = () => {
                                                         </div>
                                                         <p style={{ margin: 0, fontSize: '0.875rem', color: '#374151', lineHeight: 1.5, whiteSpace: 'pre-wrap' as const }}>{interaction.summary}</p>
                                                     </div>
+                                                    <button onClick={() => setEditingInteraction(interaction)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', padding: '0.25rem', flexShrink: 0, alignSelf: 'flex-start', borderRadius: '0.375rem', opacity: hoveredNoteId === interaction.id ? 1 : 0, transition: 'opacity 0.15s' }}>
+                                                        <Edit2 size={14} />
+                                                    </button>
                                                     <button onClick={() => handleDeleteInteraction(interaction.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', display: 'flex', padding: '0.25rem', flexShrink: 0, alignSelf: 'flex-start', borderRadius: '0.375rem' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#d1d5db'; }}>
                                                         <Trash2 size={14} />
                                                     </button>

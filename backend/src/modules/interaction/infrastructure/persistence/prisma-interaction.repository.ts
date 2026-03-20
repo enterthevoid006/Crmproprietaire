@@ -25,6 +25,15 @@ export class PrismaInteractionRepository implements InteractionRepositoryPort {
         });
     }
 
+    async findById(id: string): Promise<Interaction | null> {
+        const tenantId = TenantContext.getTenantIdOrThrow();
+        const raw = await this.prisma.interaction.findFirst({
+            where: { id, tenantId },
+        });
+        if (!raw) return null;
+        return InteractionMapper.toDomain(raw as any);
+    }
+
     async findByActorId(actorId: string): Promise<Interaction[]> {
         const tenantId = TenantContext.getTenantIdOrThrow();
 

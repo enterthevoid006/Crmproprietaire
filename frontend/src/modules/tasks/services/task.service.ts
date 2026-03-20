@@ -49,6 +49,11 @@ export const TaskService = {
         return response.data;
     },
 
+    update: async (id: string, data: { title?: string; priority?: Task['priority']; dueDate?: string }): Promise<Task> => {
+        const response = await api.patch<Task>(`/tasks/${id}`, data);
+        return response.data;
+    },
+
     delete: async (id: string): Promise<void> => {
         await api.delete(`/tasks/${id}`);
     }

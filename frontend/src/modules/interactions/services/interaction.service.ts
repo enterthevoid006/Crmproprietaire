@@ -39,6 +39,11 @@ export const InteractionService = {
         return response.data;
     },
 
+    update: async (id: string, data: { type?: Interaction['type']; summary?: string }): Promise<Interaction> => {
+        const response = await api.patch<Interaction>(`/interactions/${id}`, data);
+        return response.data;
+    },
+
     delete: async (id: string): Promise<void> => {
         await api.delete(`/interactions/${id}`);
     }
