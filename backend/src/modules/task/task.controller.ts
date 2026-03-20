@@ -32,7 +32,8 @@ export class TaskController {
 
     @Patch(':id/status')
     async updateStatus(@Param('id') id: string, @Body('status') status: TaskStatus) {
-        return this.updateTaskStatusUseCase.execute(id, status);
+        const task = await this.updateTaskStatusUseCase.execute(id, status);
+        return { id: task.id, ...task.getProps() };
     }
 
     @Delete(':id')
